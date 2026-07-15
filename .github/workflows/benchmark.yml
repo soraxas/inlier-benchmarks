@@ -6,6 +6,13 @@ on:
   schedule:
     - cron: "0 2 * * 0"
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Benchmark scope to publish
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, full]
 
 permissions:
   contents: write
@@ -37,8 +44,9 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/inlier-data" "$GITHUB_WORKSPACE/../inlier-data"
       - uses: ./.github/actions/benchmark-run
         with:
-          smoke: ${{ github.event_name != 'schedule' }}
-          seeds: ${{ github.event_name == 'schedule' && '30' || '5' }}
+          smoke: ${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.scope == 'full') }}
+          seeds: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && '30' || '5' }}
+          phototourism-pairs: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && '8' || '1' }}
       - name: Gate PR quality and cost
         if: github.event_name == 'pull_request'
         run: |

@@ -27,9 +27,10 @@ just phototourism-smoke
 
 The first command requires `zstd`, `tar`, `h5py`, and a local `../inlier-data`
 checkout; Pooch downloads the archive once and verifies it before extraction.
-The smoke path selects one pair with 512 best correspondences and runs every
+The smoke path selects one pair with 512 confidence-stratified correspondences and runs every
 robust scoring mode once. It is an integration guard, not a statistical full
-benchmark.
+benchmark. Scheduled and manually-dispatched full runs select eight pairs,
+balanced across both scenes, and sweep fast, balanced, and thorough budgets.
 
 ## CI Checkout Layout
 

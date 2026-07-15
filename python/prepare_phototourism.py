@@ -50,7 +50,22 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
                 if len(shape) == 2 and shape[1] == 4 and shape[0] >= 8:
                     candidates.append((int(shape[0]), scene, pair))
 
-    selected = sorted(candidates, key=lambda candidate: (-candidate[0], candidate[1], candidate[2]))[:count]
+    by_scene = {
+        scene: sorted(
+            (candidate for candidate in candidates if candidate[1] == scene),
+            key=lambda candidate: (-candidate[0], candidate[2]),
+        )
+        for scene in SCENES
+    }
+    selected = []
+    while len(selected) < count:
+        added = False
+        for scene in SCENES:
+            if by_scene[scene] and len(selected) < count:
+                selected.append(by_scene[scene].pop(0))
+                added = True
+        if not added:
+            break
     if len(selected) != count:
         raise RuntimeError(f"Requested {count} pairs but found only {len(selected)}")
 
@@ -65,7 +80,12 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
             if len(scores) != len(points):
                 raise RuntimeError(f"Confidence count does not match correspondences for {scene}/{pair}")
             # The tutorial's match confidence is an error-like score: lower is better.
-            order = np.argsort(scores, kind="stable")[:max_correspondences]
+            # Sample across the sorted range so the benchmark retains hard matches
+            # instead of turning every RANSAC run into a near-all-inlier case.
+            order = np.argsort(scores, kind="stable")
+            if len(order) > max_correspondences:
+                positions = np.linspace(0, len(order) - 1, max_correspondences, dtype=int)
+                order = order[positions]
             points = points[order]
             if not np.isfinite(points).all():
                 raise RuntimeError(f"Non-finite correspondences for {scene}/{pair}")

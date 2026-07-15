@@ -7,6 +7,9 @@ inputs:
   seeds:
     required: false
     default: "30"
+  phototourism-pairs:
+    required: false
+    default: "1"
 runs:
   using: composite
   steps:
@@ -21,12 +24,13 @@ runs:
         uv run --no-project --with ./inlier-data --with h5py \
           python/prepare_phototourism.py \
           --cache-dir "$RUNNER_TEMP/inlier-data" \
-          --pairs 1 \
+          --pairs "${{ inputs.phototourism-pairs }}" \
           --max-correspondences 512 \
           --output results/phototourism-input.json
+        real_args="--seeds ${{ inputs.seeds }}"
+        if [ "${{ inputs.smoke }}" = "true" ]; then real_args="--smoke --seeds 1"; fi
         cargo run --release -- \
-          --smoke \
-          --seeds 1 \
+          $real_args \
           --phototourism-input results/phototourism-input.json \
           --output results/phototourism.jsonl
         cat results/phototourism.jsonl >> results/raw.jsonl
