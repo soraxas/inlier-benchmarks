@@ -37,8 +37,8 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/inlier-data" "$GITHUB_WORKSPACE/../inlier-data"
       - uses: ./.github/actions/benchmark-run
         with:
-          smoke: ${{ github.event_name == 'pull_request' }}
-          seeds: ${{ github.event_name == 'pull_request' && '5' || '30' }}
+          smoke: ${{ github.event_name != 'schedule' }}
+          seeds: ${{ github.event_name == 'schedule' && '30' || '5' }}
       - name: Gate PR quality and cost
         if: github.event_name == 'pull_request'
         run: |
