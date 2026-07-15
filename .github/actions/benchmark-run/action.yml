@@ -1,0 +1,20 @@
+name: Run inlier benchmark
+description: Run the Rust matrix and produce JSONL, summary, and static report.
+inputs:
+  smoke:
+    required: false
+    default: "false"
+  seeds:
+    required: false
+    default: "30"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        args="--seeds ${{ inputs.seeds }} --output results/raw.jsonl"
+        if [ "${{ inputs.smoke }}" = "true" ]; then args="$args --smoke"; fi
+        cargo run --release -- $args
+        uv run --no-project --with numpy --with matplotlib python/aggregate.py results/raw.jsonl results/summary.json
+        uv run --no-project --with numpy --with matplotlib python/report.py results/summary.json site
+
