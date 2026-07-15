@@ -47,7 +47,7 @@ struct Trial {
     inlier_recall: f64,
     normalized_model_error: f64,
     inlier_classification_error: f64,
-    fundamental_matrix: Option<[[f64; 3]; 3]>,
+    epipolar_matrix: Option<[[f64; 3]; 3]>,
     inlier_indices: Option<Vec<usize>>,
     success: bool,
     failure_reason: Option<String>,
@@ -68,6 +68,9 @@ struct PhototourismPair {
     points1: Vec<[f64; 2]>,
     points2: Vec<[f64; 2]>,
     fundamental: [[f64; 3]; 3],
+    essential: [[f64; 3]; 3],
+    intrinsics1: [[f64; 3]; 3],
+    intrinsics2: [[f64; 3]; 3],
 }
 
 #[derive(Clone, Copy)]
@@ -374,7 +377,7 @@ struct Outcome {
     iterations: usize,
     truth: Vec<bool>,
     normalized_model_error: f64,
-    fundamental_matrix: Option<[[f64; 3]; 3]>,
+    epipolar_matrix: Option<[[f64; 3]; 3]>,
 }
 
 fn run(
@@ -402,7 +405,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         "fundamental" => {
@@ -421,7 +424,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         "essential" => {
@@ -440,7 +443,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         "absolute_pose" => {
@@ -459,7 +462,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         "line" => {
@@ -473,7 +476,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         "plane" => {
@@ -488,7 +491,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         "rigid_transform" => {
@@ -508,14 +511,37 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
-                fundamental_matrix: None,
+                epipolar_matrix: None,
             })
         }
         _ => Err(format!("unknown estimator {estimator}")),
     }
 }
 
+fn matrix_from_array(values: [[f64; 3]; 3]) -> Matrix3<f64> {
+    Matrix3::new(
+        values[0][0],
+        values[0][1],
+        values[0][2],
+        values[1][0],
+        values[1][1],
+        values[1][2],
+        values[2][0],
+        values[2][1],
+        values[2][2],
+    )
+}
+
+fn matrix_to_array(matrix: &Matrix3<f64>) -> [[f64; 3]; 3] {
+    [
+        [matrix[(0, 0)], matrix[(0, 1)], matrix[(0, 2)]],
+        [matrix[(1, 0)], matrix[(1, 1)], matrix[(1, 2)]],
+        [matrix[(2, 0)], matrix[(2, 1)], matrix[(2, 2)]],
+    ]
+}
+
 fn run_phototourism(
+    estimator: &str,
     pair: &PhototourismPair,
     threshold: f64,
     settings: MetasacSettings,
@@ -533,32 +559,76 @@ fn run_phototourism(
         points2.set(index, 0, target[0]);
         points2.set(index, 1, target[1]);
     }
-    let f = Matrix3::new(
-        pair.fundamental[0][0],
-        pair.fundamental[0][1],
-        pair.fundamental[0][2],
-        pair.fundamental[1][0],
-        pair.fundamental[1][1],
-        pair.fundamental[1][2],
-        pair.fundamental[2][0],
-        pair.fundamental[2][1],
-        pair.fundamental[2][2],
-    );
-    let truth: Vec<bool> = (0..pair.points1.len())
-        .map(|index| {
+    if estimator == "fundamental" {
+        let ground_truth = matrix_from_array(pair.fundamental);
+        let truth: Vec<bool> = (0..pair.points1.len())
+            .map(|index| {
+                inlier::bundle_adjustment::sampson_error(
+                    &ground_truth,
+                    &nalgebra::Vector2::new(points1.get(index, 0), points1.get(index, 1)),
+                    &nalgebra::Vector2::new(points2.get(index, 0), points2.get(index, 1)),
+                )
+                .abs()
+                    <= threshold
+            })
+            .collect();
+        let result = estimate_fundamental_matrix(&points1, &points2, threshold, Some(settings))?;
+        let error = normalized_median_residual(&truth, threshold, |index| {
             inlier::bundle_adjustment::sampson_error(
-                &f,
+                &result.model.f,
                 &nalgebra::Vector2::new(points1.get(index, 0), points1.get(index, 1)),
                 &nalgebra::Vector2::new(points2.get(index, 0), points2.get(index, 1)),
             )
             .abs()
-                <= threshold
+        });
+        return Ok(Outcome {
+            inliers: result.inliers,
+            iterations: result.iterations,
+            truth,
+            normalized_model_error: error,
+            epipolar_matrix: Some(matrix_to_array(&result.model.f)),
+        });
+    }
+
+    if estimator != "essential" {
+        return Err(format!("unsupported PhotoTourism estimator {estimator}"));
+    }
+    let intrinsics1 = matrix_from_array(pair.intrinsics1);
+    let intrinsics2 = matrix_from_array(pair.intrinsics2);
+    let inverse1 = intrinsics1
+        .try_inverse()
+        .ok_or("PhotoTourism intrinsics1 is singular")?;
+    let inverse2 = intrinsics2
+        .try_inverse()
+        .ok_or("PhotoTourism intrinsics2 is singular")?;
+    for index in 0..pair.points1.len() {
+        let source = inverse1 * Vector3::new(points1.get(index, 0), points1.get(index, 1), 1.0);
+        let target = inverse2 * Vector3::new(points2.get(index, 0), points2.get(index, 1), 1.0);
+        points1.set(index, 0, source.x / source.z);
+        points1.set(index, 1, source.y / source.z);
+        points2.set(index, 0, target.x / target.z);
+        points2.set(index, 1, target.y / target.z);
+    }
+    let normalized_threshold = threshold
+        / ((intrinsics1[(0, 0)] + intrinsics1[(1, 1)] + intrinsics2[(0, 0)] + intrinsics2[(1, 1)])
+            / 4.0);
+    let ground_truth = matrix_from_array(pair.essential);
+    let truth: Vec<bool> = (0..pair.points1.len())
+        .map(|index| {
+            inlier::bundle_adjustment::sampson_error(
+                &ground_truth,
+                &nalgebra::Vector2::new(points1.get(index, 0), points1.get(index, 1)),
+                &nalgebra::Vector2::new(points2.get(index, 0), points2.get(index, 1)),
+            )
+            .abs()
+                <= normalized_threshold
         })
         .collect();
-    let result = estimate_fundamental_matrix(&points1, &points2, threshold, Some(settings))?;
-    let error = normalized_median_residual(&truth, threshold, |index| {
+    let result =
+        estimate_essential_matrix(&points1, &points2, normalized_threshold, Some(settings))?;
+    let error = normalized_median_residual(&truth, normalized_threshold, |index| {
         inlier::bundle_adjustment::sampson_error(
-            &result.model.f,
+            &result.model.e,
             &nalgebra::Vector2::new(points1.get(index, 0), points1.get(index, 1)),
             &nalgebra::Vector2::new(points2.get(index, 0), points2.get(index, 1)),
         )
@@ -569,23 +639,7 @@ fn run_phototourism(
         iterations: result.iterations,
         truth,
         normalized_model_error: error,
-        fundamental_matrix: Some([
-            [
-                result.model.f[(0, 0)],
-                result.model.f[(0, 1)],
-                result.model.f[(0, 2)],
-            ],
-            [
-                result.model.f[(1, 0)],
-                result.model.f[(1, 1)],
-                result.model.f[(1, 2)],
-            ],
-            [
-                result.model.f[(2, 0)],
-                result.model.f[(2, 1)],
-                result.model.f[(2, 2)],
-            ],
-        ]),
+        epipolar_matrix: Some(matrix_to_array(&result.model.e)),
     })
 }
 
@@ -607,62 +661,65 @@ fn run_phototourism_suite(
     } else {
         suite.profiles.iter().collect()
     };
-    for pair in &input.pairs {
-        for mode in &suite.scoring_modes {
-            for profile in &profiles {
-                for index in 0..args.seeds {
-                    let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
-                    let start = Instant::now();
-                    let result = settings(profile, mode, seed)
-                        .and_then(|settings| run_phototourism(pair, input.threshold, settings));
-                    let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
-                    let trial = match result {
-                        Ok(outcome) => {
-                            let (precision, recall, classification_error) =
-                                classification_score(&outcome.inliers, &outcome.truth);
-                            Trial {
+    for estimator in ["fundamental", "essential"] {
+        for pair in &input.pairs {
+            for mode in &suite.scoring_modes {
+                for profile in &profiles {
+                    for index in 0..args.seeds {
+                        let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                        let start = Instant::now();
+                        let result = settings(profile, mode, seed).and_then(|settings| {
+                            run_phototourism(estimator, pair, input.threshold, settings)
+                        });
+                        let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                        let trial = match result {
+                            Ok(outcome) => {
+                                let (precision, recall, classification_error) =
+                                    classification_score(&outcome.inliers, &outcome.truth);
+                                Trial {
+                                    suite: input.dataset.clone(),
+                                    suite_version: input.schema_version,
+                                    estimator: estimator.into(),
+                                    scoring_mode: mode.clone(),
+                                    profile: (*profile).clone(),
+                                    scene: format!("{}/{}", pair.scene, pair.pair),
+                                    seed,
+                                    runtime_ms,
+                                    iterations: outcome.iterations,
+                                    inlier_precision: precision,
+                                    inlier_recall: recall,
+                                    normalized_model_error: outcome.normalized_model_error,
+                                    inlier_classification_error: classification_error,
+                                    epipolar_matrix: outcome.epipolar_matrix,
+                                    inlier_indices: Some(outcome.inliers),
+                                    success: precision >= 0.9
+                                        && recall >= 0.9
+                                        && outcome.normalized_model_error <= 1.0,
+                                    failure_reason: None,
+                                }
+                            }
+                            Err(reason) => Trial {
                                 suite: input.dataset.clone(),
                                 suite_version: input.schema_version,
-                                estimator: "fundamental".into(),
+                                estimator: estimator.into(),
                                 scoring_mode: mode.clone(),
                                 profile: (*profile).clone(),
                                 scene: format!("{}/{}", pair.scene, pair.pair),
                                 seed,
                                 runtime_ms,
-                                iterations: outcome.iterations,
-                                inlier_precision: precision,
-                                inlier_recall: recall,
-                                normalized_model_error: outcome.normalized_model_error,
-                                inlier_classification_error: classification_error,
-                                fundamental_matrix: outcome.fundamental_matrix,
-                                inlier_indices: Some(outcome.inliers),
-                                success: precision >= 0.9
-                                    && recall >= 0.9
-                                    && outcome.normalized_model_error <= 1.0,
-                                failure_reason: None,
-                            }
-                        }
-                        Err(reason) => Trial {
-                            suite: input.dataset.clone(),
-                            suite_version: input.schema_version,
-                            estimator: "fundamental".into(),
-                            scoring_mode: mode.clone(),
-                            profile: (*profile).clone(),
-                            scene: format!("{}/{}", pair.scene, pair.pair),
-                            seed,
-                            runtime_ms,
-                            iterations: 0,
-                            inlier_precision: 0.,
-                            inlier_recall: 0.,
-                            normalized_model_error: f64::MAX,
-                            inlier_classification_error: 1.,
-                            fundamental_matrix: None,
-                            inlier_indices: None,
-                            success: false,
-                            failure_reason: Some(reason),
-                        },
-                    };
-                    writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                                iterations: 0,
+                                inlier_precision: 0.,
+                                inlier_recall: 0.,
+                                normalized_model_error: f64::MAX,
+                                inlier_classification_error: 1.,
+                                epipolar_matrix: None,
+                                inlier_indices: None,
+                                success: false,
+                                failure_reason: Some(reason),
+                            },
+                        };
+                        writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                    }
                 }
             }
         }
@@ -726,7 +783,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     inlier_recall: r,
                                     normalized_model_error: outcome.normalized_model_error,
                                     inlier_classification_error: classification_error,
-                                    fundamental_matrix: None,
+                                    epipolar_matrix: None,
                                     inlier_indices: None,
                                     success,
                                     failure_reason: None,
@@ -746,7 +803,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 inlier_recall: 0.,
                                 normalized_model_error: f64::MAX,
                                 inlier_classification_error: 1.,
-                                fundamental_matrix: None,
+                                epipolar_matrix: None,
                                 inlier_indices: None,
                                 success: false,
                                 failure_reason: Some(reason),

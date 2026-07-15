@@ -42,8 +42,12 @@ def make_plot(rows: list[dict], title: str, path: Path, quality_field: str) -> N
         by_mode[row["scoring_mode"]].append(row)
     for mode, points in sorted(by_mode.items()):
         points.sort(key=lambda row: PROFILE_ORDER.get(row["profile"], 99))
-        x_values = [point[quality_field] for point in points]
-        y_values = [1_000.0 / max(point["mean_runtime_ms"], 1e-9) for point in points]
+        if quality_field == "auc_pose_10":
+            x_values = [point["mean_runtime_ms"] / 1_000.0 for point in points]
+            y_values = [point["auc_pose_10"] for point in points]
+        else:
+            x_values = [point["success_rate"] for point in points]
+            y_values = [1_000.0 / max(point["mean_runtime_ms"], 1e-9) for point in points]
         (line,) = axis.plot(
             x_values,
             y_values,
@@ -59,12 +63,16 @@ def make_plot(rows: list[dict], title: str, path: Path, quality_field: str) -> N
                 s=55,
             )
     axis.set_title(f"{title}: speed versus accuracy")
-    axis.set_xlabel(
-        "Accuracy: pose AUC @ 10 degrees" if quality_field == "auc_pose_10" else "Accuracy: success rate"
-    )
-    axis.set_ylabel("Speed: average estimates per second")
-    axis.set_yscale("log")
-    axis.set_xlim(-0.02, 1.02)
+    if quality_field == "auc_pose_10":
+        axis.set_xlabel("Average time [s]")
+        axis.set_ylabel("Pose AUC @ 10 degrees")
+        axis.set_xscale("log")
+        axis.set_ylim(-0.02, 1.02)
+    else:
+        axis.set_xlabel("Accuracy: success rate")
+        axis.set_ylabel("Speed: average estimates per second")
+        axis.set_yscale("log")
+        axis.set_xlim(-0.02, 1.02)
     axis.grid(True, which="both", alpha=0.3)
     method_legend = axis.legend(title="Robust method", loc="upper right")
     axis.add_artist(method_legend)
@@ -89,9 +97,6 @@ def main(summary_path: str, output_dir: str) -> None:
     plots = output / "plots"
     plots.mkdir(exist_ok=True)
     by_problem: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
-    for row in rows:
-        if row["suite"] == "public-api":
-            by_problem[(row["suite"], row["estimator"], row["scene"])].append(row)
     for row in dataset_rows:
         if row["suite"] != "public-api":
             aggregate_scene = f"all selected pairs ({row['scene_count']})"
@@ -110,7 +115,7 @@ def main(summary_path: str, output_dir: str) -> None:
             "<section><div class=label>"
             f"<h2>{html.escape(suite_label(suite))}</h2>"
             f"<p>{html.escape(estimator.replace('_', ' '))} / {html.escape(scene)}</p>"
-            "<p>Right and up is better.</p></div>"
+            "<p>Up and left is better.</p></div>"
             f"<img src=plots/{html.escape(filename)} alt='{html.escape(estimator)} {html.escape(scene)} trade-off plot'></section>"
         )
     table_rows = "\n".join(
@@ -127,6 +132,7 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{row['median_iterations']:.0f}</td>"
         "</tr>"
         for row in rows
+        if row["suite"] != "public-api"
     )
     (output / "index.html").write_text(
         "<!doctype html><meta charset=utf-8><title>Inlier Benchmarks</title>"
@@ -137,12 +143,12 @@ def main(summary_path: str, output_dir: str) -> None:
         "img{background:#fff;max-width:100%;width:100%}table{border-collapse:collapse;width:100%;margin-top:2rem}"
         "td,th{border:1px solid #666;padding:.4rem;text-align:right}td:first-child,td:nth-child(2),td:nth-child(3),td:nth-child(4),td:nth-child(5){text-align:left}"
         "@media(max-width:800px){section{grid-template-columns:1fr}}</style>"
-        "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and right is better.</p></header>"
-        "<div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism plots use SuperRANSAC-style pose AUC@10 degrees against average estimation time. Synthetic plots use success rate: a trial must reach at least 90% precision, 90% recall, and normalized model error no greater than 1.</p>"
-        "<p>F, B, and T label the fast, balanced, and thorough iteration budgets. Pull requests and pushes publish B-only smoke points; scheduled or manually requested full runs provide the curve.</p></div>"
+        "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and left is better.</p></header>"
+        "<div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism follows the SuperRANSAC convention: pose AUC@10 degrees on the y-axis and average estimation time in seconds on a logarithmic x-axis.</p>"
+        "<p>Triangle, circle, and square markers denote fast, balanced, and thorough iteration budgets. Pull requests and pushes publish balanced-only smoke points; scheduled or manually requested full runs provide the curve.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p></div></div>"
-        f"{''.join(plot_sections)}<h2>Pair Diagnostics</h2><table><thead><tr>"
+        f"{''.join(plot_sections)}<h2>PhotoTourism Pair Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Profile</th><th>Scene</th>"
         "<th>AUC@10°</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table>"

@@ -18,7 +18,7 @@ def normalize_keypoints(points: np.ndarray, intrinsics: np.ndarray) -> np.ndarra
 
 
 def pose_error_degrees(pair: dict, trial: dict) -> float:
-    matrix = trial.get("fundamental_matrix")
+    matrix = trial.get("epipolar_matrix")
     indices = trial.get("inlier_indices")
     if matrix is None or indices is None or len(indices) < 5:
         return 180.0
@@ -28,7 +28,9 @@ def pose_error_degrees(pair: dict, trial: dict) -> float:
         points2 = np.asarray(pair["points2"], dtype=np.float64)[indices]
         intrinsics1 = np.asarray(pair["intrinsics1"], dtype=np.float64)
         intrinsics2 = np.asarray(pair["intrinsics2"], dtype=np.float64)
-        essential = intrinsics2.T @ np.asarray(matrix, dtype=np.float64) @ intrinsics1
+        essential = np.asarray(matrix, dtype=np.float64)
+        if trial["estimator"] == "fundamental":
+            essential = intrinsics2.T @ essential @ intrinsics1
         _, rotation, translation, _ = cv2.recoverPose(
             essential,
             normalize_keypoints(points1, intrinsics1),

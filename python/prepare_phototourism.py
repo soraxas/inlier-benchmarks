@@ -75,6 +75,8 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
         with h5py.File(scene_root / "matches.h5", "r") as matches, h5py.File(
             scene_root / "match_conf.h5", "r"
         ) as confidence, h5py.File(scene_root / "Fgt.h5", "r") as fundamental, h5py.File(
+            scene_root / "Egt.h5", "r"
+        ) as essential, h5py.File(
             scene_root / "K1_K2.h5", "r"
         ) as intrinsics, h5py.File(scene_root / "R.h5", "r") as rotations, h5py.File(
             scene_root / "T.h5", "r"
@@ -108,6 +110,7 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
                     "points1": points[:, :2].tolist(),
                     "points2": points[:, 2:].tolist(),
                     "fundamental": np.asarray(fundamental[pair], dtype=np.float64).tolist(),
+                    "essential": np.asarray(essential[pair], dtype=np.float64).tolist(),
                     "intrinsics1": pair_intrinsics[0, 0].tolist(),
                     "intrinsics2": pair_intrinsics[0, 1].tolist(),
                     "relative_rotation": relative_rotation.tolist(),
