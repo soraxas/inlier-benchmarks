@@ -52,8 +52,11 @@ def main(raw_path: str, output_path: str) -> None:
                 "success_rate": sum(successes) / len(successes),
                 "median_runtime_ms": median([trial["runtime_ms"] for trial in trials]),
                 "median_iterations": median([trial["iterations"] for trial in trials]),
-                "median_normalized_error": median(
-                    [trial["normalized_error"] for trial in trials]
+                "median_normalized_model_error": median(
+                    [trial["normalized_model_error"] for trial in trials]
+                ),
+                "median_inlier_classification_error": median(
+                    [trial["inlier_classification_error"] for trial in trials]
                 ),
                 "median_precision": median([trial["inlier_precision"] for trial in trials]),
                 "median_recall": median([trial["inlier_recall"] for trial in trials]),
@@ -74,4 +77,3 @@ def main(raw_path: str, output_path: str) -> None:
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
-

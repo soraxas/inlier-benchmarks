@@ -19,6 +19,7 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
         f"<td>{row['success_rate']:.1%}</td>"
+        f"<td>{row['median_normalized_model_error']:.3f}</td>"
         f"<td>{row['median_runtime_ms']:.3f}</td>"
         f"<td>{row['median_iterations']:.0f}</td>"
         "</tr>"
@@ -31,16 +32,15 @@ def main(summary_path: str, output_dir: str) -> None:
         "td:nth-child(3),td:nth-child(4){text-align:left}</style>"
         "<h1>Inlier Benchmark Results</h1><table><thead><tr>"
         "<th>Estimator</th><th>Mode</th><th>Profile</th><th>Scene</th>"
-        "<th>Success</th><th>Median ms</th><th>Median iterations</th>"
+        "<th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table>"
     )
     (output / "latest.json").write_text(json.dumps(summary, indent=2) + "\n")
-    markdown = ["## Benchmark Smoke Summary", "", "| Estimator | Mode | Scene | Success | Iterations |", "|---|---|---|---:|---:|"]
+    markdown = ["## Benchmark Smoke Summary", "", "| Estimator | Mode | Scene | Success | Model error | Iterations |", "|---|---|---|---:|---:|---:|"]
     for row in rows:
-        markdown.append(f"| {row['estimator']} | {row['scoring_mode']} | {row['scene']} | {row['success_rate']:.1%} | {row['median_iterations']:.0f} |")
+        markdown.append(f"| {row['estimator']} | {row['scoring_mode']} | {row['scene']} | {row['success_rate']:.1%} | {row['median_normalized_model_error']:.3f} | {row['median_iterations']:.0f} |")
     (output / "summary.md").write_text("\n".join(markdown) + "\n")
 
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
-

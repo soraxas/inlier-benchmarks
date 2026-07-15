@@ -43,7 +43,8 @@ struct Trial {
     iterations: usize,
     inlier_precision: f64,
     inlier_recall: f64,
-    normalized_error: f64,
+    normalized_model_error: f64,
+    inlier_classification_error: f64,
     success: bool,
     failure_reason: Option<String>,
 }
@@ -305,7 +306,7 @@ fn pose(scene: Scene, seed: u64) -> (DataMatrix, DataMatrix, Vec<bool>) {
     (w, im, truth)
 }
 
-fn score(inliers: &[usize], truth: &[bool]) -> (f64, f64, f64, bool) {
+fn classification_score(inliers: &[usize], truth: &[bool]) -> (f64, f64, f64) {
     let mut selected = vec![false; truth.len()];
     for &i in inliers {
         if i < selected.len() {
@@ -328,7 +329,30 @@ fn score(inliers: &[usize], truth: &[bool]) -> (f64, f64, f64, bool) {
     } else {
         2. * p * r / (p + r)
     };
-    (p, r, 1. - f1, p >= 0.9 && r >= 0.9)
+    (p, r, 1. - f1)
+}
+
+fn normalized_median_residual<F>(truth: &[bool], threshold: f64, residual: F) -> f64
+where
+    F: Fn(usize) -> f64,
+{
+    let mut residuals: Vec<f64> = (0..truth.len())
+        .filter(|&index| truth[index])
+        .map(residual)
+        .filter(|value| value.is_finite())
+        .collect();
+    if residuals.is_empty() || threshold <= 0.0 {
+        return f64::MAX;
+    }
+    residuals.sort_by(f64::total_cmp);
+    residuals[residuals.len() / 2] / threshold
+}
+
+struct Outcome {
+    inliers: Vec<usize>,
+    iterations: usize,
+    truth: Vec<bool>,
+    normalized_model_error: f64,
 }
 
 fn run(
@@ -336,42 +360,127 @@ fn run(
     scene: Scene,
     settings: MetasacSettings,
     seed: u64,
-) -> Result<(Vec<usize>, usize, Vec<bool>), String> {
+) -> Result<Outcome, String> {
     match estimator {
         "homography" => {
             let (a, b, t) = homography(scene, seed);
             let r = estimate_homography(&a, &b, 0.5, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.5, |index| {
+                let source = Vector3::new(a.get(index, 0), a.get(index, 1), 1.0);
+                let projected = r.model.h * source;
+                if projected.z.abs() < 1e-12 {
+                    return f64::MAX;
+                }
+                let target = Vector3::new(b.get(index, 0), b.get(index, 1), 1.0);
+                (Vector3::new(projected.x / projected.z, projected.y / projected.z, 1.0) - target)
+                    .norm()
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         "fundamental" => {
             let (a, b, t) = image(scene, seed);
             let r = estimate_fundamental_matrix(&a, &b, 0.01, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.01, |index| {
+                inlier::bundle_adjustment::sampson_error(
+                    &r.model.f,
+                    &nalgebra::Vector2::new(a.get(index, 0), a.get(index, 1)),
+                    &nalgebra::Vector2::new(b.get(index, 0), b.get(index, 1)),
+                )
+                .abs()
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         "essential" => {
             let (a, b, t) = image(scene, seed);
             let r = estimate_essential_matrix(&a, &b, 0.01, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.01, |index| {
+                inlier::bundle_adjustment::sampson_error(
+                    &r.model.e,
+                    &nalgebra::Vector2::new(a.get(index, 0), a.get(index, 1)),
+                    &nalgebra::Vector2::new(b.get(index, 0), b.get(index, 1)),
+                )
+                .abs()
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         "absolute_pose" => {
             let (a, b, t) = pose(scene, seed);
             let r = estimate_absolute_pose(&a, &b, 0.01, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.01, |index| {
+                inlier::bundle_adjustment::reprojection_error(
+                    r.model.rotation.to_rotation_matrix().matrix(),
+                    &r.model.translation.vector,
+                    &nalgebra::Vector2::new(b.get(index, 0), b.get(index, 1)),
+                    &Vector3::new(a.get(index, 0), a.get(index, 1), a.get(index, 2)),
+                )
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         "line" => {
             let (a, t) = line(scene, seed);
             let r = estimate_line(&a, 0.05, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.05, |index| {
+                r.model.distance_to_point(a.get(index, 0), a.get(index, 1))
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         "plane" => {
             let (a, t) = plane(scene, seed);
             let r = estimate_plane(&a, 0.05, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.05, |index| {
+                r.model
+                    .distance(a.get(index, 0), a.get(index, 1), a.get(index, 2))
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         "rigid_transform" => {
             let (a, b, t) = rigid(scene, seed);
             let r = estimate_rigid_transform(&a, &b, 0.05, Some(settings))?;
-            Ok((r.inliers, r.iterations, t))
+            let error = normalized_median_residual(&t, 0.05, |index| {
+                let source =
+                    nalgebra::Point3::new(a.get(index, 0), a.get(index, 1), a.get(index, 2));
+                let target = Vector3::new(b.get(index, 0), b.get(index, 1), b.get(index, 2));
+                (target
+                    - (r.model.rotation.transform_point(&source).coords
+                        + r.model.translation.vector))
+                    .norm()
+            });
+            Ok(Outcome {
+                inliers: r.inliers,
+                iterations: r.iterations,
+                truth: t,
+                normalized_model_error: error,
+            })
         }
         _ => Err(format!("unknown estimator {estimator}")),
     }
@@ -409,8 +518,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .and_then(|s| run(estimator, scene, s, seed));
                         let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
                         let trial = match result {
-                            Ok((inliers, iterations, truth)) => {
-                                let (p, r, e, success) = score(&inliers, &truth);
+                            Ok(outcome) => {
+                                let (p, r, classification_error) =
+                                    classification_score(&outcome.inliers, &outcome.truth);
+                                let success =
+                                    p >= 0.9 && r >= 0.9 && outcome.normalized_model_error <= 1.0;
                                 Trial {
                                     suite: suite.name.clone(),
                                     suite_version: suite.version,
@@ -420,10 +532,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     scene: scene_name.clone(),
                                     seed,
                                     runtime_ms,
-                                    iterations,
+                                    iterations: outcome.iterations,
                                     inlier_precision: p,
                                     inlier_recall: r,
-                                    normalized_error: e,
+                                    normalized_model_error: outcome.normalized_model_error,
+                                    inlier_classification_error: classification_error,
                                     success,
                                     failure_reason: None,
                                 }
@@ -440,7 +553,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 iterations: 0,
                                 inlier_precision: 0.,
                                 inlier_recall: 0.,
-                                normalized_error: 1.,
+                                normalized_model_error: f64::MAX,
+                                inlier_classification_error: 1.,
                                 success: false,
                                 failure_reason: Some(reason),
                             },
@@ -456,19 +570,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::score;
+    use super::{classification_score, normalized_median_residual};
 
     #[test]
     fn classification_score_requires_precision_and_recall() {
         let truth = [true, true, true, false];
-        let (precision, recall, error, success) = score(&[0, 1, 2], &truth);
+        let (precision, recall, error) = classification_score(&[0, 1, 2], &truth);
         assert_eq!(precision, 1.0);
         assert_eq!(recall, 1.0);
         assert_eq!(error, 0.0);
-        assert!(success);
+        assert_eq!(error, 0.0);
 
-        let (_, recall, _, success) = score(&[0], &truth);
+        let (_, recall, _) = classification_score(&[0], &truth);
         assert!(recall < 0.9);
-        assert!(!success);
+    }
+
+    #[test]
+    fn model_error_is_median_inlier_residual_normalized_by_threshold() {
+        let truth = [true, false, true, true];
+        let error = normalized_median_residual(&truth, 0.5, |index| [0.1, 100.0, 0.2, 0.4][index]);
+        assert!((error - 0.4).abs() < 1e-12);
     }
 }
