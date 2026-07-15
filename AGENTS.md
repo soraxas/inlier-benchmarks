@@ -31,6 +31,8 @@ The smoke path selects one pair with 512 confidence-stratified correspondences a
 robust scoring mode once. It is an integration guard, not a statistical full
 benchmark. Scheduled and manually-dispatched full runs select eight pairs,
 balanced across both scenes, and sweep fast, balanced, and thorough budgets.
+Manual full runs use three repetitions for dashboard refreshes; the weekly
+scheduled run uses 30 repetitions for the long statistical baseline.
 
 ## CI Checkout Layout
 

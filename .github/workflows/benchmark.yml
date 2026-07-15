@@ -45,7 +45,7 @@ jobs:
       - uses: ./.github/actions/benchmark-run
         with:
           smoke: ${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.scope == 'full') }}
-          seeds: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && '30' || '5' }}
+          seeds: ${{ github.event_name == 'schedule' && '30' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full' && '3' || '5') }}
           phototourism-pairs: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && '8' || '1' }}
       - name: Gate PR quality and cost
         if: github.event_name == 'pull_request'
