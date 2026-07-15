@@ -11,13 +11,13 @@
 | essential | msac | outliers | 100.0% | 0.080 | 1000 |
 | essential | ransac | outliers | 100.0% | 0.111 | 1000 |
 | fundamental | magsac | outliers | 100.0% | 0.149 | 1000 |
-| fundamental | magsac | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.194 | 1000 |
+| fundamental | magsac | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.320 | 1000 |
 | fundamental | magsac_pp | outliers | 100.0% | 0.149 | 1000 |
-| fundamental | magsac_pp | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.194 | 1000 |
+| fundamental | magsac_pp | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.320 | 1000 |
 | fundamental | msac | outliers | 100.0% | 0.147 | 1000 |
-| fundamental | msac | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.194 | 1000 |
+| fundamental | msac | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.284 | 1000 |
 | fundamental | ransac | outliers | 100.0% | 0.149 | 1000 |
-| fundamental | ransac | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.194 | 1000 |
+| fundamental | ransac | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.295 | 1000 |
 | homography | magsac | outliers | 0.0% | 0.039 | 1000 |
 | homography | magsac_pp | outliers | 0.0% | 0.039 | 1000 |
 | homography | msac | outliers | 0.0% | 0.039 | 1000 |
