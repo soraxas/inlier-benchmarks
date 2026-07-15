@@ -35,15 +35,18 @@ def main(raw_path: str, output_path: str) -> None:
     records = [json.loads(line) for line in Path(raw_path).read_text().splitlines() if line]
     groups: dict[tuple[str, ...], list[dict]] = defaultdict(list)
     for record in records:
-        key = tuple(record[field] for field in ("estimator", "scoring_mode", "profile", "scene"))
+        key = tuple(
+            record[field] for field in ("suite", "estimator", "scoring_mode", "profile", "scene")
+        )
         groups[key].append(record)
 
     summaries = []
     for key, trials in sorted(groups.items()):
-        estimator, scoring_mode, profile, scene = key
+        suite, estimator, scoring_mode, profile, scene = key
         successes = [trial["success"] for trial in trials]
         summaries.append(
             {
+                "suite": suite,
                 "estimator": estimator,
                 "scoring_mode": scoring_mode,
                 "profile": profile,
@@ -65,10 +68,18 @@ def main(raw_path: str, output_path: str) -> None:
         )
 
     frontiers = {}
-    for estimator in sorted({row["estimator"] for row in summaries}):
-        for scene in sorted({row["scene"] for row in summaries}):
-            rows = [row for row in summaries if row["estimator"] == estimator and row["scene"] == scene]
-            frontiers[f"{estimator}/{scene}"] = pareto(rows)
+    for suite in sorted({row["suite"] for row in summaries}):
+        for estimator in sorted({row["estimator"] for row in summaries}):
+            for scene in sorted({row["scene"] for row in summaries}):
+                rows = [
+                    row
+                    for row in summaries
+                    if row["suite"] == suite
+                    and row["estimator"] == estimator
+                    and row["scene"] == scene
+                ]
+                if rows:
+                    frontiers[f"{suite}/{estimator}/{scene}"] = pareto(rows)
 
     result = {"schema_version": 1, "groups": summaries, "pareto_frontiers": frontiers}
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

@@ -11,7 +11,7 @@ ITERATION_INCREASE = 0.20
 
 def index(summary: dict) -> dict[tuple[str, ...], dict]:
     return {
-        tuple(row[field] for field in ("estimator", "scoring_mode", "profile", "scene")): row
+        tuple(row.get(field, "public-api") if field == "suite" else row[field] for field in ("suite", "estimator", "scoring_mode", "profile", "scene")): row
         for row in summary["groups"]
     }
 
@@ -44,4 +44,3 @@ def main(current_path: str, baseline_path: str) -> None:
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
-
