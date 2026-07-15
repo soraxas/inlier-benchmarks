@@ -134,6 +134,10 @@ fn settings(profile: &str, scoring: &str, seed: u64) -> Result<MetasacSettings, 
     Ok(MetasacSettings {
         min_iterations: iterations,
         max_iterations: iterations,
+        // Benchmarks charge each failed minimal solve to the configured
+        // hypothesis budget. Retrying a pathological sample internally can
+        // otherwise multiply a 5,000-iteration profile into a long run.
+        max_sampling_attempts: 1,
         confidence,
         rng_seed: Some(seed),
         scoring,
