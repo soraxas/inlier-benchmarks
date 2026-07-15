@@ -10,6 +10,9 @@ inputs:
   phototourism-pairs:
     required: false
     default: "1"
+  scope:
+    required: false
+    default: smoke
 runs:
   using: composite
   steps:
@@ -41,4 +44,9 @@ runs:
     - shell: bash
       run: |
         uv run --no-project --with numpy --with matplotlib python/aggregate.py results/raw.jsonl results/summary.json
-        uv run --no-project --with numpy --with matplotlib python/report.py results/summary.json site
+        mkdir -p site/history
+        curl --fail --silent --show-error \
+          -o site/history/index.json \
+          https://cs.tinyiu.com/inlier-benchmarks/history/index.json || true
+        BENCHMARK_SCOPE="${{ inputs.scope }}" \
+          uv run --no-project --with numpy --with matplotlib python/report.py results/summary.json site

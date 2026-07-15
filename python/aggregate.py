@@ -2,6 +2,8 @@
 """Aggregate raw benchmark JSONL into a stable, dashboard-friendly summary."""
 
 import json
+import math
+import random
 import statistics
 import sys
 from collections import defaultdict
@@ -26,6 +28,26 @@ def pose_auc_at_10(errors: list[float]) -> float | None:
         for (left_x, left_y), (right_x, right_y) in zip(points, points[1:])
     )
     return area / 10.0
+
+
+def standard_error(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    return statistics.stdev(values) / math.sqrt(len(values))
+
+
+def pose_auc_standard_error(errors: list[float]) -> float | None:
+    """Estimate AUC uncertainty with a deterministic non-parametric bootstrap."""
+    if not errors:
+        return None
+    if len(errors) == 1:
+        return 0.0
+    generator = random.Random(0)
+    samples = [
+        pose_auc_at_10([generator.choice(errors) for _ in errors])
+        for _ in range(250)
+    ]
+    return statistics.stdev(samples)
 
 
 def pareto(rows: list[dict]) -> list[dict]:
@@ -57,12 +79,19 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
     for key, trials in sorted(groups.items()):
         summary = dict(zip(fields, key))
         successes = [trial["success"] for trial in trials]
+        runtimes = [trial["runtime_ms"] for trial in trials]
+        pose_errors = [
+            trial["pose_error_deg"]
+            for trial in trials
+            if trial.get("pose_error_deg") is not None
+        ]
         summary.update(
             {
                 "trials": len(trials),
                 "success_rate": sum(successes) / len(successes),
-                "mean_runtime_ms": statistics.fmean(trial["runtime_ms"] for trial in trials),
-                "median_runtime_ms": median([trial["runtime_ms"] for trial in trials]),
+                "mean_runtime_ms": statistics.fmean(runtimes),
+                "runtime_se_ms": standard_error(runtimes),
+                "median_runtime_ms": median(runtimes),
                 "median_iterations": median([trial["iterations"] for trial in trials]),
                 "median_normalized_model_error": median(
                     [trial["normalized_model_error"] for trial in trials]
@@ -74,13 +103,8 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
                 "median_recall": median([trial["inlier_recall"] for trial in trials]),
                 "failures": sum(not success for success in successes),
                 "scene_count": len({trial["scene"] for trial in trials}),
-                "auc_pose_10": pose_auc_at_10(
-                    [
-                        trial["pose_error_deg"]
-                        for trial in trials
-                        if trial.get("pose_error_deg") is not None
-                    ]
-                ),
+                "auc_pose_10": pose_auc_at_10(pose_errors),
+                "auc_pose_10_se": pose_auc_standard_error(pose_errors),
             }
         )
         summaries.append(summary)
