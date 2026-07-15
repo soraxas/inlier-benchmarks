@@ -42,6 +42,9 @@ jobs:
         run: |
           ln -s "$GITHUB_WORKSPACE/inlier-target" "$GITHUB_WORKSPACE/../inlier"
           ln -s "$GITHUB_WORKSPACE/inlier-data" "$GITHUB_WORKSPACE/../inlier-data"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
       - uses: ./.github/actions/benchmark-run
         with:
           smoke: ${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.scope == 'full') }}

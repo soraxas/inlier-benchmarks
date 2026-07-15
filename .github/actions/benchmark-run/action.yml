@@ -21,6 +21,13 @@ runs:
         args="--seeds ${{ inputs.seeds }} --output results/raw.jsonl"
         if [ "${{ inputs.smoke }}" = "true" ]; then args="$args --smoke"; fi
         cargo run --release -- $args
+    - name: Cache benchmark data artifacts
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/inlier-data/main
+        key: inlier-data-artifacts-v1-${{ runner.os }}-${{ hashFiles('inlier-data/inlier_data/release_artifacts.json') }}
+        restore-keys: |
+          inlier-data-artifacts-v1-${{ runner.os }}-
     - shell: bash
       run: |
         command -v zstd
