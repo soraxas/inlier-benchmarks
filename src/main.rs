@@ -47,6 +47,8 @@ struct Trial {
     inlier_recall: f64,
     normalized_model_error: f64,
     inlier_classification_error: f64,
+    fundamental_matrix: Option<[[f64; 3]; 3]>,
+    inlier_indices: Option<Vec<usize>>,
     success: bool,
     failure_reason: Option<String>,
 }
@@ -372,6 +374,7 @@ struct Outcome {
     iterations: usize,
     truth: Vec<bool>,
     normalized_model_error: f64,
+    fundamental_matrix: Option<[[f64; 3]; 3]>,
 }
 
 fn run(
@@ -399,6 +402,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         "fundamental" => {
@@ -417,6 +421,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         "essential" => {
@@ -435,6 +440,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         "absolute_pose" => {
@@ -453,6 +459,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         "line" => {
@@ -466,6 +473,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         "plane" => {
@@ -480,6 +488,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         "rigid_transform" => {
@@ -499,6 +508,7 @@ fn run(
                 iterations: r.iterations,
                 truth: t,
                 normalized_model_error: error,
+                fundamental_matrix: None,
             })
         }
         _ => Err(format!("unknown estimator {estimator}")),
@@ -559,6 +569,23 @@ fn run_phototourism(
         iterations: result.iterations,
         truth,
         normalized_model_error: error,
+        fundamental_matrix: Some([
+            [
+                result.model.f[(0, 0)],
+                result.model.f[(0, 1)],
+                result.model.f[(0, 2)],
+            ],
+            [
+                result.model.f[(1, 0)],
+                result.model.f[(1, 1)],
+                result.model.f[(1, 2)],
+            ],
+            [
+                result.model.f[(2, 0)],
+                result.model.f[(2, 1)],
+                result.model.f[(2, 2)],
+            ],
+        ]),
     })
 }
 
@@ -607,6 +634,8 @@ fn run_phototourism_suite(
                                 inlier_recall: recall,
                                 normalized_model_error: outcome.normalized_model_error,
                                 inlier_classification_error: classification_error,
+                                fundamental_matrix: outcome.fundamental_matrix,
+                                inlier_indices: Some(outcome.inliers),
                                 success: precision >= 0.9
                                     && recall >= 0.9
                                     && outcome.normalized_model_error <= 1.0,
@@ -627,6 +656,8 @@ fn run_phototourism_suite(
                             inlier_recall: 0.,
                             normalized_model_error: f64::MAX,
                             inlier_classification_error: 1.,
+                            fundamental_matrix: None,
+                            inlier_indices: None,
                             success: false,
                             failure_reason: Some(reason),
                         },
@@ -695,6 +726,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     inlier_recall: r,
                                     normalized_model_error: outcome.normalized_model_error,
                                     inlier_classification_error: classification_error,
+                                    fundamental_matrix: None,
+                                    inlier_indices: None,
                                     success,
                                     failure_reason: None,
                                 }
@@ -713,6 +746,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 inlier_recall: 0.,
                                 normalized_model_error: f64::MAX,
                                 inlier_classification_error: 1.,
+                                fundamental_matrix: None,
+                                inlier_indices: None,
                                 success: false,
                                 failure_reason: Some(reason),
                             },

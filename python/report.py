@@ -31,15 +31,19 @@ def mode_label(mode: str) -> str:
     }.get(mode, mode)
 
 
-def make_plot(rows: list[dict], title: str, path: Path) -> None:
+def percentage(value: float | None) -> str:
+    return f"{value:.1%}" if value is not None else "-"
+
+
+def make_plot(rows: list[dict], title: str, path: Path, quality_field: str) -> None:
     figure, axis = plt.subplots(figsize=(10, 6), constrained_layout=True)
     by_mode: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         by_mode[row["scoring_mode"]].append(row)
     for mode, points in sorted(by_mode.items()):
         points.sort(key=lambda row: PROFILE_ORDER.get(row["profile"], 99))
-        x_values = [point["success_rate"] for point in points]
-        y_values = [1_000.0 / max(point["median_runtime_ms"], 1e-9) for point in points]
+        x_values = [point[quality_field] for point in points]
+        y_values = [1_000.0 / max(point["mean_runtime_ms"], 1e-9) for point in points]
         (line,) = axis.plot(
             x_values,
             y_values,
@@ -55,8 +59,10 @@ def make_plot(rows: list[dict], title: str, path: Path) -> None:
                 s=55,
             )
     axis.set_title(f"{title}: speed versus accuracy")
-    axis.set_xlabel("Accuracy: success rate")
-    axis.set_ylabel("Speed: estimates per second")
+    axis.set_xlabel(
+        "Accuracy: pose AUC @ 10 degrees" if quality_field == "auc_pose_10" else "Accuracy: success rate"
+    )
+    axis.set_ylabel("Speed: average estimates per second")
     axis.set_yscale("log")
     axis.set_xlim(-0.02, 1.02)
     axis.grid(True, which="both", alpha=0.3)
@@ -93,7 +99,13 @@ def main(summary_path: str, output_dir: str) -> None:
     plot_sections = []
     for (suite, estimator, scene), problem_rows in sorted(by_problem.items()):
         filename = re.sub(r"[^A-Za-z0-9._-]+", "-", f"{suite}-{estimator}-{scene}") + ".png"
-        make_plot(problem_rows, f"{suite_label(suite)} / {estimator} / {scene}", plots / filename)
+        quality_field = "auc_pose_10" if suite == "phototourism-val" else "success_rate"
+        make_plot(
+            problem_rows,
+            f"{suite_label(suite)} / {estimator} / {scene}",
+            plots / filename,
+            quality_field,
+        )
         plot_sections.append(
             "<section><div class=label>"
             f"<h2>{html.escape(suite_label(suite))}</h2>"
@@ -108,6 +120,7 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{html.escape(mode_label(row['scoring_mode']))}</td>"
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
+        f"<td>{percentage(row['auc_pose_10'])}</td>"
         f"<td>{row['success_rate']:.1%}</td>"
         f"<td>{row['median_normalized_model_error']:.3f}</td>"
         f"<td>{row['median_runtime_ms']:.3f}</td>"
@@ -125,13 +138,13 @@ def main(summary_path: str, output_dir: str) -> None:
         "td,th{border:1px solid #666;padding:.4rem;text-align:right}td:first-child,td:nth-child(2),td:nth-child(3),td:nth-child(4),td:nth-child(5){text-align:left}"
         "@media(max-width:800px){section{grid-template-columns:1fr}}</style>"
         "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and right is better.</p></header>"
-        "<div class=primer><div><h2>Reading the plots</h2><p>The x-axis is success rate: a trial must reach at least 90% precision, 90% recall, and normalized model error no greater than 1. The y-axis is complete estimates per second.</p>"
+        "<div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism plots use SuperRANSAC-style pose AUC@10 degrees against average estimation time. Synthetic plots use success rate: a trial must reach at least 90% precision, 90% recall, and normalized model error no greater than 1.</p>"
         "<p>F, B, and T label the fast, balanced, and thorough iteration budgets. Pull requests and pushes publish B-only smoke points; scheduled or manually requested full runs provide the curve.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p></div></div>"
         f"{''.join(plot_sections)}<h2>Pair Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Profile</th><th>Scene</th>"
-        "<th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
+        "<th>AUC@10°</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table>"
     )
     (output / "latest.json").write_text(json.dumps(summary, indent=2) + "\n")

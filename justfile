@@ -5,6 +5,7 @@ prepare-phototourism output="results/phototourism-input.json":
 
 phototourism-smoke input="results/phototourism-input.json":
   cargo run --release -- --suite {{suite}} --smoke --seeds 1 --phototourism-input {{input}} --output results/phototourism.jsonl
+  uv run --no-project --with numpy --with opencv-python-headless python/evaluate_phototourism.py --input {{input}} --results results/phototourism.jsonl
 
 smoke:
   cargo run --release -- --suite {{suite}} --smoke --seeds 5 --output results/raw.jsonl

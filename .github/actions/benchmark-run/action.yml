@@ -33,6 +33,10 @@ runs:
           $real_args \
           --phototourism-input results/phototourism-input.json \
           --output results/phototourism.jsonl
+        uv run --no-project --with numpy --with opencv-python-headless \
+          python/evaluate_phototourism.py \
+          --input results/phototourism-input.json \
+          --results results/phototourism.jsonl
         cat results/phototourism.jsonl >> results/raw.jsonl
     - shell: bash
       run: |

@@ -29,3 +29,9 @@ just phototourism-smoke
 
 CI runs this path in addition to the synthetic matrix and appends the four
 robust-scoring trials to the same JSONL report.
+
+PhotoTourism's primary chart follows the SuperRANSAC convention: it converts
+the estimated fundamental matrix to an essential matrix using ground-truth
+intrinsics, recovers relative pose from the estimated inliers, and plots pose
+`AUC@10°` against average estimation time. The success-rate gate remains in
+the diagnostic table.

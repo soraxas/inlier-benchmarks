@@ -12,6 +12,22 @@ def median(values: list[float]) -> float:
     return statistics.median(values) if values else 0.0
 
 
+def pose_auc_at_10(errors: list[float]) -> float | None:
+    if not errors:
+        return None
+    points = [(0.0, 0.0)]
+    for index, error in enumerate(sorted(errors), start=1):
+        if error > 10.0:
+            break
+        points.append((error, index / len(errors)))
+    points.append((10.0, points[-1][1]))
+    area = sum(
+        (right_x - left_x) * (left_y + right_y) * 0.5
+        for (left_x, left_y), (right_x, right_y) in zip(points, points[1:])
+    )
+    return area / 10.0
+
+
 def pareto(rows: list[dict]) -> list[dict]:
     """Keep points not dominated by higher success and lower iteration cost."""
     result = []
@@ -45,6 +61,7 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
             {
                 "trials": len(trials),
                 "success_rate": sum(successes) / len(successes),
+                "mean_runtime_ms": statistics.fmean(trial["runtime_ms"] for trial in trials),
                 "median_runtime_ms": median([trial["runtime_ms"] for trial in trials]),
                 "median_iterations": median([trial["iterations"] for trial in trials]),
                 "median_normalized_model_error": median(
@@ -57,6 +74,13 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
                 "median_recall": median([trial["inlier_recall"] for trial in trials]),
                 "failures": sum(not success for success in successes),
                 "scene_count": len({trial["scene"] for trial in trials}),
+                "auc_pose_10": pose_auc_at_10(
+                    [
+                        trial["pose_error_deg"]
+                        for trial in trials
+                        if trial.get("pose_error_deg") is not None
+                    ]
+                ),
             }
         )
         summaries.append(summary)

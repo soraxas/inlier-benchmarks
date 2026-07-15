@@ -74,7 +74,11 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
         scene_root = root / scene
         with h5py.File(scene_root / "matches.h5", "r") as matches, h5py.File(
             scene_root / "match_conf.h5", "r"
-        ) as confidence, h5py.File(scene_root / "Fgt.h5", "r") as fundamental:
+        ) as confidence, h5py.File(scene_root / "Fgt.h5", "r") as fundamental, h5py.File(
+            scene_root / "K1_K2.h5", "r"
+        ) as intrinsics, h5py.File(scene_root / "R.h5", "r") as rotations, h5py.File(
+            scene_root / "T.h5", "r"
+        ) as translations:
             points = np.asarray(matches[pair], dtype=np.float64)
             scores = np.asarray(confidence[pair], dtype=np.float64).reshape(-1)
             if len(scores) != len(points):
@@ -89,6 +93,14 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
             points = points[order]
             if not np.isfinite(points).all():
                 raise RuntimeError(f"Non-finite correspondences for {scene}/{pair}")
+            name1, name2 = pair.split("-", maxsplit=1)
+            rotation1 = np.asarray(rotations[name1], dtype=np.float64)
+            rotation2 = np.asarray(rotations[name2], dtype=np.float64)
+            translation1 = np.asarray(translations[name1], dtype=np.float64).reshape(3)
+            translation2 = np.asarray(translations[name2], dtype=np.float64).reshape(3)
+            relative_rotation = rotation2 @ rotation1.T
+            relative_translation = translation2 - relative_rotation @ translation1
+            pair_intrinsics = np.asarray(intrinsics[pair], dtype=np.float64)
             output.append(
                 {
                     "scene": scene,
@@ -96,6 +108,10 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
                     "points1": points[:, :2].tolist(),
                     "points2": points[:, 2:].tolist(),
                     "fundamental": np.asarray(fundamental[pair], dtype=np.float64).tolist(),
+                    "intrinsics1": pair_intrinsics[0, 0].tolist(),
+                    "intrinsics2": pair_intrinsics[0, 1].tolist(),
+                    "relative_rotation": relative_rotation.tolist(),
+                    "relative_translation": relative_translation.tolist(),
                 }
             )
     return output

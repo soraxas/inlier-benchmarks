@@ -34,6 +34,13 @@ balanced across both scenes, and sweep fast, balanced, and thorough budgets.
 Manual full runs use three repetitions for dashboard refreshes; the weekly
 scheduled run uses 30 repetitions for the long statistical baseline.
 
+For PhotoTourism fundamental-matrix trials, retain camera intrinsics, relative
+pose, the estimated fundamental matrix, and selected inliers. Post-process the
+timed estimator output with `python/evaluate_phototourism.py`, which mirrors
+SuperRANSAC's `F -> E -> recoverPose` evaluation and reports pose `AUC@10°`.
+Use that continuous metric for the primary real-data speed/accuracy plot;
+success rate remains a CI gate and diagnostic field.
+
 ## CI Checkout Layout
 
 The benchmark workflow checks out `inlier` and `inlier-data` into the workspace
