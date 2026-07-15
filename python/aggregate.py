@@ -31,26 +31,18 @@ def pareto(rows: list[dict]) -> list[dict]:
     return result
 
 
-def main(raw_path: str, output_path: str) -> None:
-    records = [json.loads(line) for line in Path(raw_path).read_text().splitlines() if line]
+def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
     groups: dict[tuple[str, ...], list[dict]] = defaultdict(list)
     for record in records:
-        key = tuple(
-            record[field] for field in ("suite", "estimator", "scoring_mode", "profile", "scene")
-        )
+        key = tuple(record[field] for field in fields)
         groups[key].append(record)
 
     summaries = []
     for key, trials in sorted(groups.items()):
-        suite, estimator, scoring_mode, profile, scene = key
+        summary = dict(zip(fields, key))
         successes = [trial["success"] for trial in trials]
-        summaries.append(
+        summary.update(
             {
-                "suite": suite,
-                "estimator": estimator,
-                "scoring_mode": scoring_mode,
-                "profile": profile,
-                "scene": scene,
                 "trials": len(trials),
                 "success_rate": sum(successes) / len(successes),
                 "median_runtime_ms": median([trial["runtime_ms"] for trial in trials]),
@@ -64,8 +56,19 @@ def main(raw_path: str, output_path: str) -> None:
                 "median_precision": median([trial["inlier_precision"] for trial in trials]),
                 "median_recall": median([trial["inlier_recall"] for trial in trials]),
                 "failures": sum(not success for success in successes),
+                "scene_count": len({trial["scene"] for trial in trials}),
             }
         )
+        summaries.append(summary)
+    return summaries
+
+
+def main(raw_path: str, output_path: str) -> None:
+    records = [json.loads(line) for line in Path(raw_path).read_text().splitlines() if line]
+    summaries = summarize(
+        records, ("suite", "estimator", "scoring_mode", "profile", "scene")
+    )
+    dataset_summaries = summarize(records, ("suite", "estimator", "scoring_mode", "profile"))
 
     frontiers = {}
     for suite in sorted({row["suite"] for row in summaries}):
@@ -81,7 +84,12 @@ def main(raw_path: str, output_path: str) -> None:
                 if rows:
                     frontiers[f"{suite}/{estimator}/{scene}"] = pareto(rows)
 
-    result = {"schema_version": 1, "groups": summaries, "pareto_frontiers": frontiers}
+    result = {
+        "schema_version": 2,
+        "groups": summaries,
+        "dataset_groups": dataset_summaries,
+        "pareto_frontiers": frontiers,
+    }
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_path).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
 

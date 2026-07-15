@@ -9,16 +9,26 @@ from collections import defaultdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 
 PROFILE_ORDER = {"fast": 0, "balanced": 1, "thorough": 2}
-PROFILE_MARKERS = {"fast": "F", "balanced": "B", "thorough": "T"}
+PROFILE_MARKERS = {"fast": "^", "balanced": "o", "thorough": "s"}
 
 
 def suite_label(suite: str) -> str:
     return {"public-api": "Synthetic public API", "phototourism-val": "PhotoTourism validation"}.get(
         suite, suite
     )
+
+
+def mode_label(mode: str) -> str:
+    return {
+        "ransac": "RANSAC",
+        "msac": "MSAC",
+        "magsac": "MAGSAC",
+        "magsac_pp": "MAGSAC++",
+    }.get(mode, mode)
 
 
 def make_plot(rows: list[dict], title: str, path: Path) -> None:
@@ -30,20 +40,19 @@ def make_plot(rows: list[dict], title: str, path: Path) -> None:
         points.sort(key=lambda row: PROFILE_ORDER.get(row["profile"], 99))
         x_values = [point["success_rate"] for point in points]
         y_values = [1_000.0 / max(point["median_runtime_ms"], 1e-9) for point in points]
-        axis.plot(
+        (line,) = axis.plot(
             x_values,
             y_values,
-            marker="o",
             linewidth=2,
-            label=mode,
+            label=mode_label(mode),
         )
         for point, x_value, y_value in zip(points, x_values, y_values):
-            axis.annotate(
-                PROFILE_MARKERS.get(point["profile"], "?"),
-                (x_value, y_value),
-                xytext=(4, 4),
-                textcoords="offset points",
-                fontsize=8,
+            axis.scatter(
+                x_value,
+                y_value,
+                marker=PROFILE_MARKERS.get(point["profile"], "o"),
+                color=line.get_color(),
+                s=55,
             )
     axis.set_title(f"{title}: speed versus accuracy")
     axis.set_xlabel("Accuracy: success rate")
@@ -51,7 +60,16 @@ def make_plot(rows: list[dict], title: str, path: Path) -> None:
     axis.set_yscale("log")
     axis.set_xlim(-0.02, 1.02)
     axis.grid(True, which="both", alpha=0.3)
-    axis.legend(title="Robust method", loc="best")
+    method_legend = axis.legend(title="Robust method", loc="upper right")
+    axis.add_artist(method_legend)
+    axis.legend(
+        handles=[
+            Line2D([], [], color="#ddd", marker=marker, linestyle="None", label=profile.title())
+            for profile, marker in PROFILE_MARKERS.items()
+        ],
+        title="Iteration budget",
+        loc="lower left",
+    )
     figure.savefig(path, dpi=160)
     plt.close(figure)
 
@@ -61,11 +79,17 @@ def main(summary_path: str, output_dir: str) -> None:
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     rows = summary["groups"]
+    dataset_rows = summary.get("dataset_groups", [])
     plots = output / "plots"
     plots.mkdir(exist_ok=True)
     by_problem: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     for row in rows:
-        by_problem[(row["suite"], row["estimator"], row["scene"])].append(row)
+        if row["suite"] == "public-api":
+            by_problem[(row["suite"], row["estimator"], row["scene"])].append(row)
+    for row in dataset_rows:
+        if row["suite"] != "public-api":
+            aggregate_scene = f"all selected pairs ({row['scene_count']})"
+            by_problem[(row["suite"], row["estimator"], aggregate_scene)].append(row)
     plot_sections = []
     for (suite, estimator, scene), problem_rows in sorted(by_problem.items()):
         filename = re.sub(r"[^A-Za-z0-9._-]+", "-", f"{suite}-{estimator}-{scene}") + ".png"
@@ -81,7 +105,7 @@ def main(summary_path: str, output_dir: str) -> None:
         "<tr>"
         f"<td>{html.escape(suite_label(row['suite']))}</td>"
         f"<td>{html.escape(row['estimator'])}</td>"
-        f"<td>{html.escape(row['scoring_mode'])}</td>"
+        f"<td>{html.escape(mode_label(row['scoring_mode']))}</td>"
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
         f"<td>{row['success_rate']:.1%}</td>"
@@ -105,7 +129,7 @@ def main(summary_path: str, output_dir: str) -> None:
         "<p>F, B, and T label the fast, balanced, and thorough iteration budgets. Pull requests and pushes publish B-only smoke points; scheduled or manually requested full runs provide the curve.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p></div></div>"
-        f"{''.join(plot_sections)}<h2>Raw Summary</h2><table><thead><tr>"
+        f"{''.join(plot_sections)}<h2>Pair Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Profile</th><th>Scene</th>"
         "<th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table>"
@@ -113,7 +137,7 @@ def main(summary_path: str, output_dir: str) -> None:
     (output / "latest.json").write_text(json.dumps(summary, indent=2) + "\n")
     markdown = ["## Benchmark Smoke Summary", "", "| Dataset / estimator | Mode | Scene | Success | Model error | Iterations |", "|---|---|---|---:|---:|---:|"]
     for row in rows:
-        markdown.append(f"| {suite_label(row['suite'])} / {row['estimator']} | {row['scoring_mode']} | {row['scene']} | {row['success_rate']:.1%} | {row['median_normalized_model_error']:.3f} | {row['median_iterations']:.0f} |")
+        markdown.append(f"| {suite_label(row['suite'])} / {row['estimator']} | {mode_label(row['scoring_mode'])} | {row['scene']} | {row['success_rate']:.1%} | {row['median_normalized_model_error']:.3f} | {row['median_iterations']:.0f} |")
     (output / "summary.md").write_text("\n".join(markdown) + "\n")
 
 
