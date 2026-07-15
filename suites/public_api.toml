@@ -1,0 +1,17 @@
+version = 1
+name = "public-api"
+description = "Deterministic public API RANSAC comparison matrix"
+
+estimators = [
+  "homography",
+  "fundamental",
+  "essential",
+  "absolute_pose",
+  "line",
+  "plane",
+  "rigid_transform",
+]
+scoring_modes = ["ransac", "msac", "magsac", "magsac_pp"]
+scenes = ["clean", "noisy", "outliers"]
+profiles = ["fast", "balanced", "thorough"]
+
