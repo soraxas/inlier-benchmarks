@@ -42,7 +42,7 @@ jobs:
       - name: Gate PR quality and cost
         if: github.event_name == 'pull_request'
         run: |
-          curl --fail --silent --show-error -o baseline/summary.json https://soraxas.github.io/inlier-benchmarks/benchmark/latest.json || true
+          curl --fail --silent --show-error -o baseline/summary.json https://cs.tinyiu.com/inlier-benchmarks/latest.json || true
           uv run --no-project python/regress.py results/summary.json baseline/summary.json
           cat site/summary.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
@@ -58,5 +58,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: site
-          destination_dir: benchmark
           keep_files: true
