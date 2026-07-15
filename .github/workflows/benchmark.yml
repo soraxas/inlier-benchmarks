@@ -22,14 +22,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: soraxas/inlier
-          path: ../inlier
+          path: inlier-target
           submodules: recursive
       - uses: actions/checkout@v4
         with:
           repository: soraxas/inlier-data
-          path: ../inlier-data
+          path: inlier-data
       - uses: dtolnay/rust-toolchain@stable
       - uses: astral-sh/setup-uv@v5
+      - name: Expose sibling checkout paths
+        shell: bash
+        run: |
+          ln -s "$GITHUB_WORKSPACE/inlier-target" "$GITHUB_WORKSPACE/../inlier"
+          ln -s "$GITHUB_WORKSPACE/inlier-data" "$GITHUB_WORKSPACE/../inlier-data"
       - uses: ./.github/actions/benchmark-run
         with:
           smoke: ${{ github.event_name == 'pull_request' }}
