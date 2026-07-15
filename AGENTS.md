@@ -1,0 +1,46 @@
+# Inlier Benchmarks
+
+This repository benchmarks a sibling `../inlier` checkout. Large fixtures are
+owned by a sibling `../inlier-data` checkout and must be fetched through its
+installed `inlier_data` Pooch registry, never copied into this repository.
+
+## Benchmark Scope
+
+- Keep synthetic public-API coverage in `suites/public_api.toml` and the Rust
+  runner. It exercises all seven supported estimation APIs and robust scoring
+  modes.
+- Keep real datasets in small adapter scripts under `python/`. Adapters fetch
+  immutable release archives with Pooch, verify their SHA-256, and translate
+  source-specific formats into small JSON inputs for Rust. Do not add HDF5 or
+  dataset-specific native dependencies to the Rust benchmark runner.
+- PhotoTourism is a real fundamental-matrix smoke benchmark. Its adapter uses
+  `phototourism-ransac-val-v1.tar.zst`, extracts cached correspondences and
+  `Fgt.h5`, ranks tutorial confidence values ascending because lower is better,
+  and writes deterministic inputs.
+
+## Running PhotoTourism
+
+```bash
+just prepare-phototourism
+just phototourism-smoke
+```
+
+The first command requires `zstd`, `tar`, `h5py`, and a local `../inlier-data`
+checkout; Pooch downloads the archive once and verifies it before extraction.
+The smoke path selects one pair with 512 best correspondences and runs every
+robust scoring mode once. It is an integration guard, not a statistical full
+benchmark.
+
+## CI Checkout Layout
+
+The benchmark workflow checks out `inlier` and `inlier-data` into the workspace
+and exposes sibling symlinks because the crate uses relative Cargo paths. Keep
+this layout when changing CI. The composite action must run the PhotoTourism
+adapter before invoking Rust with `--phototourism-input`, then append its JSONL
+trials to the synthetic results before aggregation and report generation.
+
+## Result Compatibility
+
+Each trial is JSONL and the dashboard groups results by estimator and scene.
+Scene labels can contain `/` for real data, so report filenames must be
+sanitized while preserving the original label in displayed output.

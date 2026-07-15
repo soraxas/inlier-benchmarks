@@ -18,6 +18,8 @@ struct Args {
     seeds: usize,
     #[arg(long)]
     smoke: bool,
+    #[arg(long)]
+    phototourism_input: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -47,6 +49,23 @@ struct Trial {
     inlier_classification_error: f64,
     success: bool,
     failure_reason: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PhototourismInput {
+    schema_version: u32,
+    dataset: String,
+    threshold: f64,
+    pairs: Vec<PhototourismPair>,
+}
+
+#[derive(Deserialize)]
+struct PhototourismPair {
+    scene: String,
+    pair: String,
+    points1: Vec<[f64; 2]>,
+    points2: Vec<[f64; 2]>,
+    fundamental: [[f64; 3]; 3],
 }
 
 #[derive(Clone, Copy)]
@@ -486,13 +505,152 @@ fn run(
     }
 }
 
+fn run_phototourism(
+    pair: &PhototourismPair,
+    threshold: f64,
+    settings: MetasacSettings,
+) -> Result<Outcome, String> {
+    if pair.points1.len() != pair.points2.len() || pair.points1.len() < 8 {
+        return Err(
+            "PhotoTourism pair must contain matching point arrays with at least 8 rows".into(),
+        );
+    }
+    let mut points1 = DataMatrix::zeros(pair.points1.len(), 2);
+    let mut points2 = DataMatrix::zeros(pair.points2.len(), 2);
+    for (index, (source, target)) in pair.points1.iter().zip(&pair.points2).enumerate() {
+        points1.set(index, 0, source[0]);
+        points1.set(index, 1, source[1]);
+        points2.set(index, 0, target[0]);
+        points2.set(index, 1, target[1]);
+    }
+    let f = Matrix3::new(
+        pair.fundamental[0][0],
+        pair.fundamental[0][1],
+        pair.fundamental[0][2],
+        pair.fundamental[1][0],
+        pair.fundamental[1][1],
+        pair.fundamental[1][2],
+        pair.fundamental[2][0],
+        pair.fundamental[2][1],
+        pair.fundamental[2][2],
+    );
+    let truth: Vec<bool> = (0..pair.points1.len())
+        .map(|index| {
+            inlier::bundle_adjustment::sampson_error(
+                &f,
+                &nalgebra::Vector2::new(points1.get(index, 0), points1.get(index, 1)),
+                &nalgebra::Vector2::new(points2.get(index, 0), points2.get(index, 1)),
+            )
+            .abs()
+                <= threshold
+        })
+        .collect();
+    let result = estimate_fundamental_matrix(&points1, &points2, threshold, Some(settings))?;
+    let error = normalized_median_residual(&truth, threshold, |index| {
+        inlier::bundle_adjustment::sampson_error(
+            &result.model.f,
+            &nalgebra::Vector2::new(points1.get(index, 0), points1.get(index, 1)),
+            &nalgebra::Vector2::new(points2.get(index, 0), points2.get(index, 1)),
+        )
+        .abs()
+    });
+    Ok(Outcome {
+        inliers: result.inliers,
+        iterations: result.iterations,
+        truth,
+        normalized_model_error: error,
+    })
+}
+
+fn run_phototourism_suite(
+    input: &PhototourismInput,
+    suite: &Suite,
+    args: &Args,
+    out: &mut fs::File,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if input.schema_version != 1 || input.threshold <= 0.0 {
+        return Err("unsupported PhotoTourism input schema or threshold".into());
+    }
+    let profiles: Vec<&String> = if args.smoke {
+        suite
+            .profiles
+            .iter()
+            .filter(|profile| profile.as_str() == "balanced")
+            .collect()
+    } else {
+        suite.profiles.iter().collect()
+    };
+    for pair in &input.pairs {
+        for mode in &suite.scoring_modes {
+            for profile in &profiles {
+                for index in 0..args.seeds {
+                    let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                    let start = Instant::now();
+                    let result = settings(profile, mode, seed)
+                        .and_then(|settings| run_phototourism(pair, input.threshold, settings));
+                    let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                    let trial = match result {
+                        Ok(outcome) => {
+                            let (precision, recall, classification_error) =
+                                classification_score(&outcome.inliers, &outcome.truth);
+                            Trial {
+                                suite: input.dataset.clone(),
+                                suite_version: input.schema_version,
+                                estimator: "fundamental".into(),
+                                scoring_mode: mode.clone(),
+                                profile: (*profile).clone(),
+                                scene: format!("{}/{}", pair.scene, pair.pair),
+                                seed,
+                                runtime_ms,
+                                iterations: outcome.iterations,
+                                inlier_precision: precision,
+                                inlier_recall: recall,
+                                normalized_model_error: outcome.normalized_model_error,
+                                inlier_classification_error: classification_error,
+                                success: precision >= 0.9
+                                    && recall >= 0.9
+                                    && outcome.normalized_model_error <= 1.0,
+                                failure_reason: None,
+                            }
+                        }
+                        Err(reason) => Trial {
+                            suite: input.dataset.clone(),
+                            suite_version: input.schema_version,
+                            estimator: "fundamental".into(),
+                            scoring_mode: mode.clone(),
+                            profile: (*profile).clone(),
+                            scene: format!("{}/{}", pair.scene, pair.pair),
+                            seed,
+                            runtime_ms,
+                            iterations: 0,
+                            inlier_precision: 0.,
+                            inlier_recall: 0.,
+                            normalized_model_error: f64::MAX,
+                            inlier_classification_error: 1.,
+                            success: false,
+                            failure_reason: Some(reason),
+                        },
+                    };
+                    writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let suite: Suite = toml::from_str(&fs::read_to_string(&args.suite)?)?;
     if let Some(parent) = args.output.parent() {
         fs::create_dir_all(parent)?;
     }
-    let mut out = fs::File::create(args.output)?;
+    let mut out = fs::File::create(&args.output)?;
+    if let Some(path) = &args.phototourism_input {
+        let input: PhototourismInput = serde_json::from_str(&fs::read_to_string(path)?)?;
+        run_phototourism_suite(&input, &suite, &args, &mut out)?;
+        return Ok(());
+    }
     let profiles: Vec<&String> = if args.smoke {
         suite
             .profiles

@@ -15,6 +15,22 @@ runs:
         args="--seeds ${{ inputs.seeds }} --output results/raw.jsonl"
         if [ "${{ inputs.smoke }}" = "true" ]; then args="$args --smoke"; fi
         cargo run --release -- $args
+    - shell: bash
+      run: |
+        command -v zstd
+        uv run --no-project --with ./inlier-data --with h5py \
+          python/prepare_phototourism.py \
+          --cache-dir "$RUNNER_TEMP/inlier-data" \
+          --pairs 1 \
+          --max-correspondences 512 \
+          --output results/phototourism-input.json
+        cargo run --release -- \
+          --smoke \
+          --seeds 1 \
+          --phototourism-input results/phototourism-input.json \
+          --output results/phototourism.jsonl
+        cat results/phototourism.jsonl >> results/raw.jsonl
+    - shell: bash
+      run: |
         uv run --no-project --with numpy --with matplotlib python/aggregate.py results/raw.jsonl results/summary.json
         uv run --no-project --with numpy --with matplotlib python/report.py results/summary.json site
-

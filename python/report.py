@@ -3,6 +3,7 @@
 
 import html
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -50,7 +51,7 @@ def main(summary_path: str, output_dir: str) -> None:
         by_problem[(row["estimator"], row["scene"])].append(row)
     plot_sections = []
     for (estimator, scene), problem_rows in sorted(by_problem.items()):
-        filename = f"{estimator}-{scene}.png"
+        filename = re.sub(r"[^A-Za-z0-9._-]+", "-", f"{estimator}-{scene}") + ".png"
         make_plot(problem_rows, f"{estimator} / {scene}", plots / filename)
         plot_sections.append(
             "<section><div class=label>"
