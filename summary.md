@@ -2,6 +2,198 @@
 
 | Dataset / estimator | Mode | Scene | Success | Model error | Iterations |
 |---|---|---|---:|---:|---:|
+| Homography validation / homography | MAGSAC | EVD/dum | 0.0% | 17.095 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/face | 0.0% | 0.438 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/fox | 0.0% | 0.979 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/graf | 33.3% | 0.423 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/mag | 0.0% | 1.012 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/pkk | 0.0% | 1.401 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/there | 0.0% | 0.520 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.332 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.276 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.428 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.257 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.228 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.259 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.263 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.294 | 1000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.342 | 1000 |
+| Homography validation / homography | MAGSAC | EVD/dum | 0.0% | 10.534 | 250 |
+| Homography validation / homography | MAGSAC | EVD/face | 0.0% | 0.395 | 250 |
+| Homography validation / homography | MAGSAC | EVD/fox | 0.0% | 0.979 | 250 |
+| Homography validation / homography | MAGSAC | EVD/graf | 0.0% | 0.464 | 250 |
+| Homography validation / homography | MAGSAC | EVD/mag | 0.0% | 0.905 | 250 |
+| Homography validation / homography | MAGSAC | EVD/pkk | 0.0% | 1.027 | 250 |
+| Homography validation / homography | MAGSAC | EVD/there | 0.0% | 0.565 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.306 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_bricks_1_3 | 66.7% | 0.418 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_calder_1_3 | 0.0% | 0.468 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.227 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.237 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.223 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.254 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_wall_1_4 | 0.0% | 31.574 | 250 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_wormhole_1_4 | 0.0% | 0.796 | 250 |
+| Homography validation / homography | MAGSAC | EVD/dum | 0.0% | 2.003 | 5000 |
+| Homography validation / homography | MAGSAC | EVD/face | 0.0% | 0.354 | 5000 |
+| Homography validation / homography | MAGSAC | EVD/fox | 0.0% | 1.056 | 5000 |
+| Homography validation / homography | MAGSAC | EVD/graf | 100.0% | 0.416 | 5000 |
+| Homography validation / homography | MAGSAC | EVD/mag | 0.0% | 0.887 | 5000 |
+| Homography validation / homography | MAGSAC | EVD/pkk | 0.0% | 0.867 | 5000 |
+| Homography validation / homography | MAGSAC | EVD/there | 0.0% | 0.501 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.355 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.276 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.261 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.247 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.226 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.228 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.244 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.238 | 5000 |
+| Homography validation / homography | MAGSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.397 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/dum | 0.0% | 6.128 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/face | 0.0% | 0.438 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/fox | 0.0% | 0.979 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/graf | 33.3% | 0.423 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/mag | 0.0% | 1.012 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/pkk | 0.0% | 0.777 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/there | 0.0% | 0.520 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.220 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.267 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_calder_1_3 | 100.0% | 0.428 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.201 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_strand_1_2 | 100.0% | 0.198 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.245 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_underground_1_2 | 100.0% | 0.197 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_wall_1_4 | 100.0% | 0.294 | 1000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.342 | 1000 |
+| Homography validation / homography | MAGSAC++ | EVD/dum | 0.0% | 10.534 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/face | 0.0% | 0.395 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/fox | 0.0% | 0.979 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/graf | 0.0% | 0.464 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/mag | 0.0% | 0.749 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/pkk | 0.0% | 1.038 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/there | 0.0% | 0.565 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.188 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_bricks_1_3 | 66.7% | 0.418 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_calder_1_3 | 0.0% | 0.468 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.227 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_strand_1_2 | 100.0% | 0.237 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.217 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_underground_1_2 | 100.0% | 0.197 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_wall_1_4 | 0.0% | 31.574 | 250 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_wormhole_1_4 | 0.0% | 0.796 | 250 |
+| Homography validation / homography | MAGSAC++ | EVD/dum | 0.0% | 2.003 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/face | 0.0% | 0.354 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/fox | 0.0% | 1.056 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/graf | 100.0% | 0.416 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/mag | 0.0% | 0.887 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/pkk | 0.0% | 0.826 | 5000 |
+| Homography validation / homography | MAGSAC++ | EVD/there | 0.0% | 0.579 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.264 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.219 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_calder_1_3 | 100.0% | 0.261 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.247 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_strand_1_2 | 100.0% | 0.226 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.228 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_underground_1_2 | 100.0% | 0.256 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_wall_1_4 | 100.0% | 0.238 | 5000 |
+| Homography validation / homography | MAGSAC++ | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.397 | 5000 |
+| Homography validation / homography | MSAC | EVD/dum | 0.0% | 6.128 | 1000 |
+| Homography validation / homography | MSAC | EVD/face | 0.0% | 0.402 | 1000 |
+| Homography validation / homography | MSAC | EVD/fox | 0.0% | 0.626 | 1000 |
+| Homography validation / homography | MSAC | EVD/graf | 33.3% | 0.423 | 1000 |
+| Homography validation / homography | MSAC | EVD/mag | 0.0% | 1.012 | 1000 |
+| Homography validation / homography | MSAC | EVD/pkk | 0.0% | 0.777 | 1000 |
+| Homography validation / homography | MSAC | EVD/there | 0.0% | 0.520 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.114 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.267 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.428 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.201 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.178 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.084 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.147 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.294 | 1000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.342 | 1000 |
+| Homography validation / homography | MSAC | EVD/dum | 0.0% | 10.534 | 250 |
+| Homography validation / homography | MSAC | EVD/face | 0.0% | 0.395 | 250 |
+| Homography validation / homography | MSAC | EVD/fox | 0.0% | 0.912 | 250 |
+| Homography validation / homography | MSAC | EVD/graf | 0.0% | 0.464 | 250 |
+| Homography validation / homography | MSAC | EVD/mag | 0.0% | 0.749 | 250 |
+| Homography validation / homography | MSAC | EVD/pkk | 0.0% | 1.038 | 250 |
+| Homography validation / homography | MSAC | EVD/there | 0.0% | 0.560 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.188 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_bricks_1_3 | 66.7% | 0.418 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_calder_1_3 | 0.0% | 0.468 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.227 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.237 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.105 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.197 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_wall_1_4 | 0.0% | 31.574 | 250 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_wormhole_1_4 | 0.0% | 0.796 | 250 |
+| Homography validation / homography | MSAC | EVD/dum | 0.0% | 2.003 | 5000 |
+| Homography validation / homography | MSAC | EVD/face | 0.0% | 0.354 | 5000 |
+| Homography validation / homography | MSAC | EVD/fox | 0.0% | 1.056 | 5000 |
+| Homography validation / homography | MSAC | EVD/graf | 100.0% | 0.416 | 5000 |
+| Homography validation / homography | MSAC | EVD/mag | 0.0% | 0.887 | 5000 |
+| Homography validation / homography | MSAC | EVD/pkk | 0.0% | 0.826 | 5000 |
+| Homography validation / homography | MSAC | EVD/there | 0.0% | 0.520 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.101 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.160 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.261 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.223 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.165 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.173 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.166 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.238 | 5000 |
+| Homography validation / homography | MSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.397 | 5000 |
+| Homography validation / homography | RANSAC | EVD/dum | 0.0% | 6.128 | 1000 |
+| Homography validation / homography | RANSAC | EVD/face | 0.0% | 0.402 | 1000 |
+| Homography validation / homography | RANSAC | EVD/fox | 0.0% | 0.626 | 1000 |
+| Homography validation / homography | RANSAC | EVD/graf | 33.3% | 0.423 | 1000 |
+| Homography validation / homography | RANSAC | EVD/mag | 0.0% | 1.012 | 1000 |
+| Homography validation / homography | RANSAC | EVD/pkk | 0.0% | 0.777 | 1000 |
+| Homography validation / homography | RANSAC | EVD/there | 0.0% | 0.520 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.114 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.253 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.428 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.201 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.178 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.084 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.147 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.294 | 1000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.342 | 1000 |
+| Homography validation / homography | RANSAC | EVD/dum | 0.0% | 10.534 | 250 |
+| Homography validation / homography | RANSAC | EVD/face | 0.0% | 0.395 | 250 |
+| Homography validation / homography | RANSAC | EVD/fox | 0.0% | 0.912 | 250 |
+| Homography validation / homography | RANSAC | EVD/graf | 0.0% | 0.464 | 250 |
+| Homography validation / homography | RANSAC | EVD/mag | 0.0% | 0.749 | 250 |
+| Homography validation / homography | RANSAC | EVD/pkk | 0.0% | 1.038 | 250 |
+| Homography validation / homography | RANSAC | EVD/there | 0.0% | 0.560 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.188 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_bricks_1_3 | 66.7% | 0.418 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_calder_1_3 | 0.0% | 0.468 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.227 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.237 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.105 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.197 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_wall_1_4 | 0.0% | 31.574 | 250 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_wormhole_1_4 | 0.0% | 0.796 | 250 |
+| Homography validation / homography | RANSAC | EVD/dum | 0.0% | 2.003 | 5000 |
+| Homography validation / homography | RANSAC | EVD/face | 0.0% | 0.354 | 5000 |
+| Homography validation / homography | RANSAC | EVD/fox | 0.0% | 1.056 | 5000 |
+| Homography validation / homography | RANSAC | EVD/graf | 100.0% | 0.416 | 5000 |
+| Homography validation / homography | RANSAC | EVD/mag | 0.0% | 0.887 | 5000 |
+| Homography validation / homography | RANSAC | EVD/pkk | 0.0% | 0.826 | 5000 |
+| Homography validation / homography | RANSAC | EVD/there | 0.0% | 0.520 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.098 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.160 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.261 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.200 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.165 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.173 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.166 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.238 | 5000 |
+| Homography validation / homography | RANSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.403 | 5000 |
 | PhotoTourism validation / essential | MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.285 | 1000 |
 | PhotoTourism validation / essential | MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.327 | 1000 |
 | PhotoTourism validation / essential | MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.236 | 1000 |
@@ -302,42 +494,42 @@
 | Synthetic public API / fundamental | RANSAC | clean | 100.0% | 0.000 | 5000 |
 | Synthetic public API / fundamental | RANSAC | noisy | 100.0% | 0.010 | 5000 |
 | Synthetic public API / fundamental | RANSAC | outliers | 100.0% | 0.137 | 5000 |
-| Synthetic public API / homography | MAGSAC | clean | 0.0% | 0.000 | 1000 |
-| Synthetic public API / homography | MAGSAC | noisy | 0.0% | 0.116 | 1000 |
-| Synthetic public API / homography | MAGSAC | outliers | 0.0% | 180.766 | 1000 |
-| Synthetic public API / homography | MAGSAC | clean | 0.0% | 0.000 | 250 |
-| Synthetic public API / homography | MAGSAC | noisy | 0.0% | 0.116 | 250 |
-| Synthetic public API / homography | MAGSAC | outliers | 0.0% | 180.766 | 250 |
-| Synthetic public API / homography | MAGSAC | clean | 0.0% | 0.000 | 5000 |
-| Synthetic public API / homography | MAGSAC | noisy | 0.0% | 0.116 | 5000 |
-| Synthetic public API / homography | MAGSAC | outliers | 0.0% | 180.766 | 5000 |
-| Synthetic public API / homography | MAGSAC++ | clean | 0.0% | 0.000 | 1000 |
-| Synthetic public API / homography | MAGSAC++ | noisy | 0.0% | 0.116 | 1000 |
-| Synthetic public API / homography | MAGSAC++ | outliers | 0.0% | 180.766 | 1000 |
-| Synthetic public API / homography | MAGSAC++ | clean | 0.0% | 0.000 | 250 |
-| Synthetic public API / homography | MAGSAC++ | noisy | 0.0% | 0.116 | 250 |
-| Synthetic public API / homography | MAGSAC++ | outliers | 0.0% | 180.766 | 250 |
-| Synthetic public API / homography | MAGSAC++ | clean | 0.0% | 0.000 | 5000 |
-| Synthetic public API / homography | MAGSAC++ | noisy | 0.0% | 0.116 | 5000 |
-| Synthetic public API / homography | MAGSAC++ | outliers | 0.0% | 180.766 | 5000 |
-| Synthetic public API / homography | MSAC | clean | 0.0% | 0.000 | 1000 |
-| Synthetic public API / homography | MSAC | noisy | 0.0% | 0.116 | 1000 |
-| Synthetic public API / homography | MSAC | outliers | 0.0% | 180.766 | 1000 |
-| Synthetic public API / homography | MSAC | clean | 0.0% | 0.000 | 250 |
-| Synthetic public API / homography | MSAC | noisy | 0.0% | 0.116 | 250 |
-| Synthetic public API / homography | MSAC | outliers | 0.0% | 180.766 | 250 |
-| Synthetic public API / homography | MSAC | clean | 0.0% | 0.000 | 5000 |
-| Synthetic public API / homography | MSAC | noisy | 0.0% | 0.116 | 5000 |
-| Synthetic public API / homography | MSAC | outliers | 0.0% | 180.766 | 5000 |
-| Synthetic public API / homography | RANSAC | clean | 0.0% | 0.000 | 1000 |
-| Synthetic public API / homography | RANSAC | noisy | 0.0% | 0.116 | 1000 |
-| Synthetic public API / homography | RANSAC | outliers | 0.0% | 180.766 | 1000 |
-| Synthetic public API / homography | RANSAC | clean | 0.0% | 0.000 | 250 |
-| Synthetic public API / homography | RANSAC | noisy | 0.0% | 0.116 | 250 |
-| Synthetic public API / homography | RANSAC | outliers | 0.0% | 180.766 | 250 |
-| Synthetic public API / homography | RANSAC | clean | 0.0% | 0.000 | 5000 |
-| Synthetic public API / homography | RANSAC | noisy | 0.0% | 0.116 | 5000 |
-| Synthetic public API / homography | RANSAC | outliers | 0.0% | 180.766 | 5000 |
+| Synthetic public API / homography | MAGSAC | clean | 100.0% | 0.000 | 1000 |
+| Synthetic public API / homography | MAGSAC | noisy | 100.0% | 0.318 | 1000 |
+| Synthetic public API / homography | MAGSAC | outliers | 100.0% | 0.243 | 1000 |
+| Synthetic public API / homography | MAGSAC | clean | 100.0% | 0.000 | 250 |
+| Synthetic public API / homography | MAGSAC | noisy | 100.0% | 0.286 | 250 |
+| Synthetic public API / homography | MAGSAC | outliers | 100.0% | 0.159 | 250 |
+| Synthetic public API / homography | MAGSAC | clean | 100.0% | 0.000 | 5000 |
+| Synthetic public API / homography | MAGSAC | noisy | 100.0% | 0.401 | 5000 |
+| Synthetic public API / homography | MAGSAC | outliers | 100.0% | 0.350 | 5000 |
+| Synthetic public API / homography | MAGSAC++ | clean | 100.0% | 0.000 | 1000 |
+| Synthetic public API / homography | MAGSAC++ | noisy | 100.0% | 0.184 | 1000 |
+| Synthetic public API / homography | MAGSAC++ | outliers | 100.0% | 0.225 | 1000 |
+| Synthetic public API / homography | MAGSAC++ | clean | 100.0% | 0.000 | 250 |
+| Synthetic public API / homography | MAGSAC++ | noisy | 100.0% | 0.184 | 250 |
+| Synthetic public API / homography | MAGSAC++ | outliers | 100.0% | 0.128 | 250 |
+| Synthetic public API / homography | MAGSAC++ | clean | 100.0% | 0.000 | 5000 |
+| Synthetic public API / homography | MAGSAC++ | noisy | 100.0% | 0.311 | 5000 |
+| Synthetic public API / homography | MAGSAC++ | outliers | 100.0% | 0.215 | 5000 |
+| Synthetic public API / homography | MSAC | clean | 100.0% | 0.000 | 1000 |
+| Synthetic public API / homography | MSAC | noisy | 100.0% | 0.017 | 1000 |
+| Synthetic public API / homography | MSAC | outliers | 100.0% | 0.019 | 1000 |
+| Synthetic public API / homography | MSAC | clean | 100.0% | 0.000 | 250 |
+| Synthetic public API / homography | MSAC | noisy | 100.0% | 0.020 | 250 |
+| Synthetic public API / homography | MSAC | outliers | 100.0% | 0.020 | 250 |
+| Synthetic public API / homography | MSAC | clean | 100.0% | 0.000 | 5000 |
+| Synthetic public API / homography | MSAC | noisy | 100.0% | 0.016 | 5000 |
+| Synthetic public API / homography | MSAC | outliers | 100.0% | 0.018 | 5000 |
+| Synthetic public API / homography | RANSAC | clean | 100.0% | 0.000 | 1000 |
+| Synthetic public API / homography | RANSAC | noisy | 100.0% | 0.017 | 1000 |
+| Synthetic public API / homography | RANSAC | outliers | 100.0% | 0.019 | 1000 |
+| Synthetic public API / homography | RANSAC | clean | 100.0% | 0.000 | 250 |
+| Synthetic public API / homography | RANSAC | noisy | 100.0% | 0.020 | 250 |
+| Synthetic public API / homography | RANSAC | outliers | 100.0% | 0.020 | 250 |
+| Synthetic public API / homography | RANSAC | clean | 100.0% | 0.000 | 5000 |
+| Synthetic public API / homography | RANSAC | noisy | 100.0% | 0.016 | 5000 |
+| Synthetic public API / homography | RANSAC | outliers | 100.0% | 0.018 | 5000 |
 | Synthetic public API / line | MAGSAC | clean | 100.0% | 0.000 | 1000 |
 | Synthetic public API / line | MAGSAC | noisy | 100.0% | 0.011 | 1000 |
 | Synthetic public API / line | MAGSAC | outliers | 100.0% | 0.016 | 1000 |
