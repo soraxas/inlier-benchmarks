@@ -53,6 +53,7 @@ struct Trial {
     inlier_classification_error: f64,
     epipolar_matrix: Option<[[f64; 3]; 3]>,
     inlier_indices: Option<Vec<usize>>,
+    homography_auc_3: Option<f64>,
     success: bool,
     failure_reason: Option<String>,
 }
@@ -404,6 +405,7 @@ struct Outcome {
     truth: Vec<bool>,
     normalized_model_error: f64,
     epipolar_matrix: Option<[[f64; 3]; 3]>,
+    homography_auc_3: Option<f64>,
 }
 
 fn run(
@@ -432,6 +434,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         "fundamental" => {
@@ -451,6 +454,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         "essential" => {
@@ -470,6 +474,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         "absolute_pose" => {
@@ -489,6 +494,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         "line" => {
@@ -503,6 +509,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         "plane" => {
@@ -518,6 +525,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         "rigid_transform" => {
@@ -538,6 +546,7 @@ fn run(
                 truth: t,
                 normalized_model_error: error,
                 epipolar_matrix: None,
+                homography_auc_3: None,
             })
         }
         _ => Err(format!("unknown estimator {estimator}")),
@@ -575,6 +584,35 @@ fn homography_transfer_error(homography: &Matrix3<f64>, source: [f64; 2], target
     (estimate - Vector3::new(target[0], target[1], 1.0)).norm()
 }
 
+fn auc_at_threshold(errors: &[f64], threshold: f64) -> f64 {
+    if errors.is_empty() || threshold <= 0.0 {
+        return 0.0;
+    }
+    let mut sorted: Vec<f64> = errors
+        .iter()
+        .copied()
+        .filter(|error| error.is_finite() && *error >= 0.0)
+        .collect();
+    if sorted.is_empty() {
+        return 0.0;
+    }
+    sorted.sort_by(f64::total_cmp);
+    let mut previous_error = 0.0;
+    let mut previous_recall = 0.0;
+    let mut area = 0.0;
+    for (index, error) in sorted.iter().enumerate() {
+        if *error > threshold {
+            break;
+        }
+        let recall = (index + 1) as f64 / sorted.len() as f64;
+        area += (error - previous_error) * (previous_recall + recall) * 0.5;
+        previous_error = *error;
+        previous_recall = recall;
+    }
+    area += (threshold - previous_error) * previous_recall;
+    area / threshold
+}
+
 fn run_homography_fixture(
     pair: &HomographyPair,
     threshold: f64,
@@ -609,12 +647,25 @@ fn run_homography_fixture(
     let error = normalized_median_residual(&truth, threshold, |index| {
         homography_transfer_error(&result.model.h, pair.points1[index], pair.points2[index])
     });
+    let ground_truth_errors: Vec<f64> = pair
+        .points1
+        .iter()
+        .map(|source| {
+            let target = ground_truth * Vector3::new(source[0], source[1], 1.0);
+            homography_transfer_error(
+                &result.model.h,
+                *source,
+                [target.x / target.z, target.y / target.z],
+            )
+        })
+        .collect();
     Ok(Outcome {
         inliers: result.inliers,
         iterations: result.iterations,
         truth,
         normalized_model_error: error,
         epipolar_matrix: None,
+        homography_auc_3: Some(auc_at_threshold(&ground_truth_errors, threshold)),
     })
 }
 
@@ -665,6 +716,7 @@ fn run_phototourism(
             truth,
             normalized_model_error: error,
             epipolar_matrix: Some(matrix_to_array(&result.model.f)),
+            homography_auc_3: None,
         });
     }
 
@@ -718,6 +770,7 @@ fn run_phototourism(
         truth,
         normalized_model_error: error,
         epipolar_matrix: Some(matrix_to_array(&result.model.e)),
+        homography_auc_3: None,
     })
 }
 
@@ -770,6 +823,7 @@ fn run_phototourism_suite(
                                     inlier_classification_error: classification_error,
                                     epipolar_matrix: outcome.epipolar_matrix,
                                     inlier_indices: Some(outcome.inliers),
+                                    homography_auc_3: outcome.homography_auc_3,
                                     success: precision >= 0.9
                                         && recall >= 0.9
                                         && outcome.normalized_model_error <= 1.0,
@@ -792,6 +846,7 @@ fn run_phototourism_suite(
                                 inlier_classification_error: 1.,
                                 epipolar_matrix: None,
                                 inlier_indices: None,
+                                homography_auc_3: None,
                                 success: false,
                                 failure_reason: Some(reason),
                             },
@@ -853,6 +908,7 @@ fn run_homography_suite(
                                 inlier_classification_error: classification_error,
                                 epipolar_matrix: None,
                                 inlier_indices: Some(outcome.inliers),
+                                homography_auc_3: outcome.homography_auc_3,
                                 success: precision >= 0.9
                                     && recall >= 0.9
                                     && outcome.normalized_model_error <= 1.0,
@@ -875,6 +931,7 @@ fn run_homography_suite(
                             inlier_classification_error: 1.,
                             epipolar_matrix: None,
                             inlier_indices: None,
+                            homography_auc_3: None,
                             success: false,
                             failure_reason: Some(reason),
                         },
@@ -950,6 +1007,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     inlier_classification_error: classification_error,
                                     epipolar_matrix: None,
                                     inlier_indices: None,
+                                    homography_auc_3: outcome.homography_auc_3,
                                     success,
                                     failure_reason: None,
                                 }
@@ -970,6 +1028,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 inlier_classification_error: 1.,
                                 epipolar_matrix: None,
                                 inlier_indices: None,
+                                homography_auc_3: None,
                                 success: false,
                                 failure_reason: Some(reason),
                             },

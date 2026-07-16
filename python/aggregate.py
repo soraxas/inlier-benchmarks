@@ -85,6 +85,11 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
             for trial in trials
             if trial.get("pose_error_deg") is not None
         ]
+        homography_aucs = [
+            trial["homography_auc_3"]
+            for trial in trials
+            if trial.get("homography_auc_3") is not None
+        ]
         summary.update(
             {
                 "trials": len(trials),
@@ -105,6 +110,12 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
                 "scene_count": len({trial["scene"] for trial in trials}),
                 "auc_pose_10": pose_auc_at_10(pose_errors),
                 "auc_pose_10_se": pose_auc_standard_error(pose_errors),
+                "auc_homography_3": statistics.fmean(homography_aucs)
+                if homography_aucs
+                else None,
+                "auc_homography_3_se": standard_error(homography_aucs)
+                if homography_aucs
+                else None,
             }
         )
         summaries.append(summary)

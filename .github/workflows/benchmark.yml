@@ -56,6 +56,7 @@ jobs:
           smoke: ${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.scope == 'full') }}
           seeds: ${{ github.event_name == 'schedule' && '30' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full' && '3' || '5') }}
           phototourism-pairs: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && '8' || '1' }}
+          homography-pairs: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && '16' || '2' }}
           scope: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')) && 'full' || 'smoke' }}
       - name: Gate PR quality and cost
         if: github.event_name == 'pull_request'

@@ -15,9 +15,11 @@ PROFILE_MARKERS = {"fast": "triangle-up", "balanced": "circle", "thorough": "squ
 
 
 def suite_label(suite: str) -> str:
-    return {"public-api": "Synthetic public API", "phototourism-val": "PhotoTourism validation"}.get(
-        suite, suite
-    )
+    return {
+        "public-api": "Synthetic public API",
+        "phototourism-val": "PhotoTourism validation",
+        "homography-ransac-val": "Homography validation",
+    }.get(suite, suite)
 
 
 def mode_label(mode: str) -> str:
@@ -79,8 +81,15 @@ def update_history(output: Path, dataset_rows: list[dict]) -> dict:
     return history
 
 
-def make_plot(rows: list[dict], title: str) -> dict:
+def quality_metric(suite: str) -> tuple[str, str, str]:
+    if suite == "homography-ransac-val":
+        return "auc_homography_3", "auc_homography_3_se", "Transfer AUC @ 3 pixels"
+    return "auc_pose_10", "auc_pose_10_se", "Pose AUC @ 10 degrees"
+
+
+def make_plot(rows: list[dict], title: str, suite: str) -> dict:
     """Build a Plotly figure following the SuperRANSAC speed/AUC convention."""
+    metric, metric_se, metric_label = quality_metric(suite)
     by_mode: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         by_mode[row["scoring_mode"]].append(row)
@@ -93,7 +102,7 @@ def make_plot(rows: list[dict], title: str) -> dict:
                 "mode": "lines+markers",
                 "name": mode_label(mode),
                 "x": [point["mean_runtime_ms"] / 1_000.0 for point in points],
-                "y": [point["auc_pose_10"] for point in points],
+                "y": [point[metric] for point in points],
                 "error_x": {
                     "type": "data",
                     "array": [point["runtime_se_ms"] / 1_000.0 for point in points],
@@ -101,7 +110,7 @@ def make_plot(rows: list[dict], title: str) -> dict:
                 },
                 "error_y": {
                     "type": "data",
-                    "array": [point["auc_pose_10_se"] or 0.0 for point in points],
+                    "array": [point[metric_se] or 0.0 for point in points],
                     "visible": True,
                 },
                 "marker": {
@@ -115,7 +124,7 @@ def make_plot(rows: list[dict], title: str) -> dict:
                 ],
                 "hovertemplate": (
                     "%{fullData.name}<br>Budget: %{customdata[0]}<br>Time: %{x:.4f} s"
-                    "<br>Pose AUC@10 degrees: %{y:.4f}<br>Trials: %{customdata[1]}"
+                    f"<br>{metric_label}: %{{y:.4f}}<br>Trials: %{{customdata[1]}}"
                     "<br>Pairs: %{customdata[2]}<br>Success: %{customdata[3]:.1%}<extra></extra>"
                 ),
             }
@@ -138,7 +147,7 @@ def make_plot(rows: list[dict], title: str) -> dict:
                 "gridcolor": "#e5e7eb",
             },
             "yaxis": {
-                "title": "Pose AUC @ 10 degrees",
+                "title": metric_label,
                 "range": [0, 1],
                 "tickformat": ".1f",
                 "zeroline": True,
@@ -169,7 +178,7 @@ def main(summary_path: str, output_dir: str) -> None:
     plot_figures = []
     for (suite, estimator, scene), problem_rows in sorted(by_problem.items()):
         chart_id = re.sub(r"[^A-Za-z0-9_-]+", "-", f"chart-{suite}-{estimator}-{scene}")
-        plot_figures.append((chart_id, make_plot(problem_rows, f"{suite_label(suite)} / {estimator} / {scene}")))
+        plot_figures.append((chart_id, make_plot(problem_rows, f"{suite_label(suite)} / {estimator} / {scene}", suite)))
         plot_sections.append(
             "<section><div class=label>"
             f"<h2>{html.escape(suite_label(suite))}</h2>"
@@ -184,7 +193,7 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{html.escape(mode_label(row['scoring_mode']))}</td>"
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
-        f"<td>{percentage(row['auc_pose_10'])}</td>"
+        f"<td>{percentage(row[quality_metric(row['suite'])[0]])}</td>"
         f"<td>{row['success_rate']:.1%}</td>"
         f"<td>{row['median_normalized_model_error']:.3f}</td>"
         f"<td>{row['median_runtime_ms']:.3f}</td>"
@@ -208,13 +217,13 @@ def main(summary_path: str, output_dir: str) -> None:
         "@media(max-width:800px){section{grid-template-columns:1fr}.history-grid{grid-template-columns:1fr}}</style>"
         "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and left is better.</p></header>"
         "<nav class=tabs role=tablist aria-label='Benchmark views'><button role=tab aria-selected=true aria-controls=quality-panel data-tab=quality-panel>Current results</button><button role=tab aria-selected=false aria-controls=history-panel data-tab=history-panel>Historical regression</button></nav>"
-        "<main id=quality-panel class=panel><div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism follows the SuperRANSAC convention: pose AUC@10 degrees on the y-axis and average estimation time in seconds on a logarithmic x-axis. Standard-error bars show trial variability.</p>"
+        "<main id=quality-panel class=panel><div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism follows the SuperRANSAC convention: pose AUC@10 degrees on the y-axis and average estimation time in seconds on a logarithmic x-axis. Homography validation uses transfer AUC@3 pixels against its ground-truth homography. Standard-error bars show trial variability.</p>"
         "<p>Triangle, circle, and square markers denote fast, balanced, and thorough iteration budgets. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p></div></div>"
         f"{''.join(plot_sections)}<h2>PhotoTourism Pair Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Profile</th><th>Scene</th>"
-        "<th>AUC@10°</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
+        "<th>Quality AUC</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table></main>"
         "<main id=history-panel class=panel hidden><div class=primer><div><h2>Comparable Full Runs</h2><p>Only scheduled and manually requested full runs are retained. Smoke runs are excluded because they use a different pair and seed budget. The x-axis uses the tested inlier commit; click a point to open that revision.</p></div><div><h2>Uncertainty</h2><p>AUC error bars are deterministic bootstrap standard errors over all pair-seed trials. Runtime error bars are standard errors over those trials.</p></div></div><div class=history-toolbar><label for=history-profile>Iteration budget</label><select id=history-profile><option value=balanced selected>Balanced</option><option value=fast>Fast</option><option value=thorough>Thorough</option></select></div><div class=history-grid><div id=history-auc class=history-chart></div><div id=history-runtime class=history-chart></div></div></main>"
         "<script>const benchmarkPlots="

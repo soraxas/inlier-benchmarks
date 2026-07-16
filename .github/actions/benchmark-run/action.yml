@@ -10,6 +10,9 @@ inputs:
   phototourism-pairs:
     required: false
     default: "1"
+  homography-pairs:
+    required: false
+    default: "2"
   scope:
     required: false
     default: smoke
@@ -48,6 +51,17 @@ runs:
           --input results/phototourism-input.json \
           --results results/phototourism.jsonl
         cat results/phototourism.jsonl >> results/raw.jsonl
+        uv run --no-project --with-editable ./inlier-data --with h5py \
+          python/prepare_homography.py \
+          --cache-dir "$RUNNER_TEMP/inlier-data" \
+          --pairs "${{ inputs.homography-pairs }}" \
+          --max-correspondences 512 \
+          --output results/homography-input.json
+        cargo run --release -- \
+          $real_args \
+          --homography-input results/homography-input.json \
+          --output results/homography.jsonl
+        cat results/homography.jsonl >> results/raw.jsonl
     - shell: bash
       run: |
         uv run --no-project --with numpy python/aggregate.py results/raw.jsonl results/summary.json
