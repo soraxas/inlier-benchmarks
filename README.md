@@ -9,8 +9,8 @@ fixture adapters.
 
 ```bash
 cargo run --release -- --suite suites/public_api.toml --output results/raw.jsonl
-uv run --no-project --with numpy --with matplotlib python/aggregate.py results/raw.jsonl results/summary.json
-uv run --no-project --with numpy --with matplotlib python/report.py results/summary.json site
+uv run --no-project --with numpy python/aggregate.py results/raw.jsonl results/summary.json
+uv run --no-project python/report.py results/summary.json site
 ```
 
 Use `--smoke --seeds 5` for a PR-sized run. The default suite runs all profiles
@@ -36,3 +36,14 @@ to every scoring mode, converts the estimated fundamental matrix to an
 essential matrix using ground-truth intrinsics, recovers relative pose from the
 estimated inliers, and plots pose `AUC@10°` against average estimation time.
 The success-rate gate remains in the diagnostic table.
+
+The dashboard uses Plotly directly in the published HTML, rather than static
+Matplotlib images. Its primary plots expose trial-standard-error bars and
+hover details without adding a Python plotting dependency.
+
+## Reference-comparison roadmap
+
+The current PhotoTourism fixture is an `inlier` API benchmark, not a numerical
+reproduction of SuperRANSAC's aggregate paper result. See [TODO.md](TODO.md)
+for the six-dataset, two-feature-track work required for a like-for-like
+comparison.

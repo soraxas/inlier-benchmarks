@@ -55,3 +55,16 @@ trials to the synthetic results before aggregation and report generation.
 Each trial is JSONL and the dashboard groups results by estimator and scene.
 Scene labels can contain `/` for real data, so report filenames must be
 sanitized while preserving the original label in displayed output.
+
+The published report uses Plotly in the generated HTML for both current and
+historical charts. Keep the primary real-data chart aligned with the
+SuperRANSAC convention: runtime on a logarithmic x-axis, pose AUC@10 degrees
+on the y-axis, plus standard-error bars and hover details. Do not reintroduce
+static Matplotlib images for the dashboard.
+
+## Reference Dataset Roadmap
+
+`TODO.md` records the outstanding work to reproduce the six-dataset
+SuperRANSAC evaluation: ScanNet1500, PhotoTourism, LaMAR, 7Scenes, ETH3D, and
+KITTI. Before adding a fixture, update the corresponding checklist item with
+the artifact, adapter, ground-truth, feature-track, and evaluation status.
