@@ -1,5 +1,5 @@
 name: Run inlier benchmark
-description: Run the Rust matrix and produce JSONL, summary, and static report.
+description: Run the Rust matrix and produce JSONL, summary, and interactive report.
 inputs:
   smoke:
     required: false
@@ -50,10 +50,10 @@ runs:
         cat results/phototourism.jsonl >> results/raw.jsonl
     - shell: bash
       run: |
-        uv run --no-project --with numpy --with matplotlib python/aggregate.py results/raw.jsonl results/summary.json
+        uv run --no-project --with numpy python/aggregate.py results/raw.jsonl results/summary.json
         mkdir -p site/history
         curl --fail --silent --show-error \
           -o site/history/index.json \
           https://cs.tinyiu.com/inlier-benchmarks/history/index.json || true
         BENCHMARK_SCOPE="${{ inputs.scope }}" \
-          uv run --no-project --with numpy --with matplotlib python/report.py results/summary.json site
+          uv run --no-project python/report.py results/summary.json site
