@@ -66,6 +66,11 @@ Publish GitHub Pages only from scheduled or manually-dispatched full runs.
 Smoke runs are intentionally limited to one pair and are CI diagnostics, not
 comparable results; they must never overwrite the public dashboard.
 
+Regression history must record `BENCHMARK_TARGET_REVISION`, the SHA checked
+out for the sibling `inlier-target`, and link to `BENCHMARK_TARGET_REPOSITORY`.
+Do not use `GITHUB_SHA`: that identifies the benchmark harness, not the code
+being measured.
+
 ## Reference Dataset Roadmap
 
 `TODO.md` records the outstanding work to reproduce the six-dataset

@@ -36,6 +36,11 @@ jobs:
         with:
           repository: soraxas/inlier-data
           path: inlier-data
+      - name: Record implementation revision
+        shell: bash
+        run: |
+          echo "BENCHMARK_TARGET_REVISION=$(git -C inlier-target rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "BENCHMARK_TARGET_REPOSITORY=soraxas/inlier" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
       - uses: astral-sh/setup-uv@v5
       - name: Expose sibling checkout paths

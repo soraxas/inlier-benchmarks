@@ -45,6 +45,10 @@ GitHub Pages publishes only scheduled or manually dispatched full runs. Push
 and pull-request smoke runs remain CI artifacts, so a single difficult pair
 cannot overwrite the comparable dashboard with a zero-AUC point.
 
+Regression history records the checked-out `inlier` implementation SHA, not
+the benchmark harness SHA. Its commit-axis points open the tested source
+revision.
+
 ## Reference-comparison roadmap
 
 The current PhotoTourism fixture is an `inlier` API benchmark, not a numerical
