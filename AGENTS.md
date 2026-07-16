@@ -13,6 +13,10 @@ installed `inlier_data` Pooch registry, never copied into this repository.
   immutable release archives with Pooch, verify their SHA-256, and translate
   source-specific formats into small JSON inputs for Rust. Do not add HDF5 or
   dataset-specific native dependencies to the Rust benchmark runner.
+- Homography validation uses `homography-ransac-val-v1.tar.zst`. Its adapter
+  reads HPatchesSeq and EVD validation `matches.h5`, `match_conf.h5`, and
+  `Hgt.h5`, preserves ascending tutorial-confidence order, and uses a 3-pixel
+  forward-transfer threshold for labels and estimation.
 - PhotoTourism is a real epipolar-geometry smoke benchmark. Its adapter uses
   `phototourism-ransac-val-v1.tar.zst`, extracts cached correspondences and
   `Fgt.h5`, ranks tutorial confidence values ascending because lower is better,

@@ -31,7 +31,7 @@ runs:
     - shell: bash
       run: |
         command -v zstd
-        uv run --no-project --with ./inlier-data --with h5py \
+        uv run --no-project --with-editable ./inlier-data --with h5py \
           python/prepare_phototourism.py \
           --cache-dir "$RUNNER_TEMP/inlier-data" \
           --pairs "${{ inputs.phototourism-pairs }}" \

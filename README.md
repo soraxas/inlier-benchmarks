@@ -30,6 +30,19 @@ just phototourism-smoke
 CI runs this path in addition to the synthetic matrix and appends the four
 robust-scoring trials to the same JSONL report.
 
+## Homography smoke benchmark
+
+The real homography smoke test uses the immutable HPatchesSeq and EVD
+validation fixture. It retains precomputed correspondences, their tutorial
+confidence ordering, and the ground-truth homography, while excluding source
+images. Its 3-pixel transfer threshold is applied consistently for ground
+truth inlier labels and estimation.
+
+```bash
+just prepare-homography
+just homography-smoke
+```
+
 PhotoTourism's primary chart follows the SuperRANSAC convention: it ranks
 matches by the tutorial's error-like confidence, applies PROSAC consistently
 to every scoring mode, converts the estimated fundamental matrix to an

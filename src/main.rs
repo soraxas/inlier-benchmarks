@@ -22,6 +22,8 @@ struct Args {
     smoke: bool,
     #[arg(long)]
     phototourism_input: Option<PathBuf>,
+    #[arg(long)]
+    homography_input: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -73,6 +75,23 @@ struct PhototourismPair {
     essential: [[f64; 3]; 3],
     intrinsics1: [[f64; 3]; 3],
     intrinsics2: [[f64; 3]; 3],
+}
+
+#[derive(Deserialize)]
+struct HomographyInput {
+    schema_version: u32,
+    dataset: String,
+    threshold: f64,
+    pairs: Vec<HomographyPair>,
+}
+
+#[derive(Deserialize)]
+struct HomographyPair {
+    dataset: String,
+    pair: String,
+    points1: Vec<[f64; 2]>,
+    points2: Vec<[f64; 2]>,
+    homography: [[f64; 3]; 3],
 }
 
 #[derive(Clone, Copy)]
@@ -547,6 +566,58 @@ fn matrix_to_array(matrix: &Matrix3<f64>) -> [[f64; 3]; 3] {
     ]
 }
 
+fn homography_transfer_error(homography: &Matrix3<f64>, source: [f64; 2], target: [f64; 2]) -> f64 {
+    let projected = homography * Vector3::new(source[0], source[1], 1.0);
+    if !projected.z.is_finite() || projected.z.abs() < 1e-12 {
+        return f64::MAX;
+    }
+    let estimate = Vector3::new(projected.x / projected.z, projected.y / projected.z, 1.0);
+    (estimate - Vector3::new(target[0], target[1], 1.0)).norm()
+}
+
+fn run_homography_fixture(
+    pair: &HomographyPair,
+    threshold: f64,
+    settings: MetasacSettings,
+) -> Result<Outcome, String> {
+    if pair.points1.len() != pair.points2.len() || pair.points1.len() < 4 {
+        return Err(
+            "Homography pair must contain matching point arrays with at least 4 rows".into(),
+        );
+    }
+    let mut points1 = DataMatrix::zeros(pair.points1.len(), 2);
+    let mut points2 = DataMatrix::zeros(pair.points2.len(), 2);
+    for (index, (source, target)) in pair.points1.iter().zip(&pair.points2).enumerate() {
+        points1.set(index, 0, source[0]);
+        points1.set(index, 1, source[1]);
+        points2.set(index, 0, target[0]);
+        points2.set(index, 1, target[1]);
+    }
+    let ground_truth = matrix_from_array(pair.homography);
+    if !ground_truth.iter().all(|value| value.is_finite()) {
+        return Err("Homography ground truth contains a non-finite value".into());
+    }
+    let truth: Vec<bool> = pair
+        .points1
+        .iter()
+        .zip(&pair.points2)
+        .map(|(source, target)| {
+            homography_transfer_error(&ground_truth, *source, *target) <= threshold
+        })
+        .collect();
+    let result = estimate_homography(&points1, &points2, threshold, Some(settings))?;
+    let error = normalized_median_residual(&truth, threshold, |index| {
+        homography_transfer_error(&result.model.h, pair.points1[index], pair.points2[index])
+    });
+    Ok(Outcome {
+        inliers: result.inliers,
+        iterations: result.iterations,
+        truth,
+        normalized_model_error: error,
+        epipolar_matrix: None,
+    })
+}
+
 fn run_phototourism(
     estimator: &str,
     pair: &PhototourismPair,
@@ -734,6 +805,88 @@ fn run_phototourism_suite(
     Ok(())
 }
 
+fn run_homography_suite(
+    input: &HomographyInput,
+    suite: &Suite,
+    args: &Args,
+    out: &mut fs::File,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if input.schema_version != 1 || input.threshold <= 0.0 {
+        return Err("unsupported homography input schema or threshold".into());
+    }
+    let profiles: Vec<&String> = if args.smoke {
+        suite
+            .profiles
+            .iter()
+            .filter(|profile| profile.as_str() == "balanced")
+            .collect()
+    } else {
+        suite.profiles.iter().collect()
+    };
+    for pair in &input.pairs {
+        for mode in &suite.scoring_modes {
+            for profile in &profiles {
+                for index in 0..args.seeds {
+                    let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                    let start = Instant::now();
+                    let result = settings(profile, mode, seed).and_then(|settings| {
+                        run_homography_fixture(pair, input.threshold, settings)
+                    });
+                    let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                    let trial = match result {
+                        Ok(outcome) => {
+                            let (precision, recall, classification_error) =
+                                classification_score(&outcome.inliers, &outcome.truth);
+                            Trial {
+                                suite: input.dataset.clone(),
+                                suite_version: input.schema_version,
+                                estimator: "homography".into(),
+                                scoring_mode: mode.clone(),
+                                profile: (*profile).clone(),
+                                scene: format!("{}/{}", pair.dataset, pair.pair),
+                                seed,
+                                runtime_ms,
+                                iterations: outcome.iterations,
+                                inlier_precision: precision,
+                                inlier_recall: recall,
+                                normalized_model_error: outcome.normalized_model_error,
+                                inlier_classification_error: classification_error,
+                                epipolar_matrix: None,
+                                inlier_indices: Some(outcome.inliers),
+                                success: precision >= 0.9
+                                    && recall >= 0.9
+                                    && outcome.normalized_model_error <= 1.0,
+                                failure_reason: None,
+                            }
+                        }
+                        Err(reason) => Trial {
+                            suite: input.dataset.clone(),
+                            suite_version: input.schema_version,
+                            estimator: "homography".into(),
+                            scoring_mode: mode.clone(),
+                            profile: (*profile).clone(),
+                            scene: format!("{}/{}", pair.dataset, pair.pair),
+                            seed,
+                            runtime_ms,
+                            iterations: 0,
+                            inlier_precision: 0.,
+                            inlier_recall: 0.,
+                            normalized_model_error: f64::MAX,
+                            inlier_classification_error: 1.,
+                            epipolar_matrix: None,
+                            inlier_indices: None,
+                            success: false,
+                            failure_reason: Some(reason),
+                        },
+                    };
+                    writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let suite: Suite = toml::from_str(&fs::read_to_string(&args.suite)?)?;
@@ -744,6 +897,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = &args.phototourism_input {
         let input: PhototourismInput = serde_json::from_str(&fs::read_to_string(path)?)?;
         run_phototourism_suite(&input, &suite, &args, &mut out)?;
+        return Ok(());
+    }
+    if let Some(path) = &args.homography_input {
+        let input: HomographyInput = serde_json::from_str(&fs::read_to_string(path)?)?;
+        run_homography_suite(&input, &suite, &args, &mut out)?;
         return Ok(());
     }
     let profiles: Vec<&String> = if args.smoke {
