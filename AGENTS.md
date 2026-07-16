@@ -62,6 +62,10 @@ SuperRANSAC convention: runtime on a logarithmic x-axis, pose AUC@10 degrees
 on the y-axis, plus standard-error bars and hover details. Do not reintroduce
 static Matplotlib images for the dashboard.
 
+Publish GitHub Pages only from scheduled or manually-dispatched full runs.
+Smoke runs are intentionally limited to one pair and are CI diagnostics, not
+comparable results; they must never overwrite the public dashboard.
+
 ## Reference Dataset Roadmap
 
 `TODO.md` records the outstanding work to reproduce the six-dataset

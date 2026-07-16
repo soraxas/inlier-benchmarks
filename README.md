@@ -41,6 +41,10 @@ The dashboard uses Plotly directly in the published HTML, rather than static
 Matplotlib images. Its primary plots expose trial-standard-error bars and
 hover details without adding a Python plotting dependency.
 
+GitHub Pages publishes only scheduled or manually dispatched full runs. Push
+and pull-request smoke runs remain CI artifacts, so a single difficult pair
+cannot overwrite the comparable dashboard with a zero-AUC point.
+
 ## Reference-comparison roadmap
 
 The current PhotoTourism fixture is an `inlier` API benchmark, not a numerical
