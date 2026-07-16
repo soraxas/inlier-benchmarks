@@ -13,10 +13,11 @@ installed `inlier_data` Pooch registry, never copied into this repository.
   immutable release archives with Pooch, verify their SHA-256, and translate
   source-specific formats into small JSON inputs for Rust. Do not add HDF5 or
   dataset-specific native dependencies to the Rust benchmark runner.
-- PhotoTourism is a real fundamental-matrix smoke benchmark. Its adapter uses
+- PhotoTourism is a real epipolar-geometry smoke benchmark. Its adapter uses
   `phototourism-ransac-val-v1.tar.zst`, extracts cached correspondences and
   `Fgt.h5`, ranks tutorial confidence values ascending because lower is better,
-  and writes deterministic inputs.
+  and writes deterministic inputs. The Rust runner uses the resulting order
+  with PROSAC for every scoring mode; do not shuffle these correspondences.
 
 ## Running PhotoTourism
 

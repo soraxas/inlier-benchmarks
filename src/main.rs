@@ -2,7 +2,9 @@ use clap::Parser;
 use inlier::{
     MetasacSettings, estimate_absolute_pose, estimate_essential_matrix,
     estimate_fundamental_matrix, estimate_homography, estimate_line, estimate_plane,
-    estimate_rigid_transform, settings::ScoringType, types::DataMatrix,
+    estimate_rigid_transform,
+    settings::{SamplerType, ScoringType},
+    types::DataMatrix,
 };
 use nalgebra::{Matrix3, Rotation3, Vector3};
 use serde::{Deserialize, Serialize};
@@ -140,6 +142,7 @@ fn settings(profile: &str, scoring: &str, seed: u64) -> Result<MetasacSettings, 
         max_sampling_attempts: 1,
         confidence,
         rng_seed: Some(seed),
+        sampler: SamplerType::Prosac,
         scoring,
         ..Default::default()
     })
