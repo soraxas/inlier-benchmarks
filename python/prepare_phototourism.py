@@ -93,6 +93,7 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
                 positions = np.linspace(0, len(order) - 1, max_correspondences, dtype=int)
                 order = order[positions]
             points = points[order]
+            scores = scores[order]
             if not np.isfinite(points).all():
                 raise RuntimeError(f"Non-finite correspondences for {scene}/{pair}")
             name1, name2 = pair.split("-", maxsplit=1)
@@ -109,6 +110,11 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
                     "pair": pair,
                     "points1": points[:, :2].tolist(),
                     "points2": points[:, 2:].tolist(),
+                    # Retained for provenance and sampler-order audits. PROSAC
+                    # consumes the ordered rows directly; these scores must not
+                    # be passed as scoring priors because that changes the
+                    # objective instead of only the sampling distribution.
+                    "match_scores": scores.tolist(),
                     "fundamental": np.asarray(fundamental[pair], dtype=np.float64).tolist(),
                     "essential": np.asarray(essential[pair], dtype=np.float64).tolist(),
                     "intrinsics1": pair_intrinsics[0, 0].tolist(),

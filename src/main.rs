@@ -74,6 +74,7 @@ struct PhototourismPair {
     pair: String,
     points1: Vec<[f64; 2]>,
     points2: Vec<[f64; 2]>,
+    match_scores: Vec<f64>,
     fundamental: [[f64; 3]; 3],
     essential: [[f64; 3]; 3],
     intrinsics1: [[f64; 3]; 3],
@@ -771,6 +772,15 @@ fn run_phototourism(
         return Err(
             "PhotoTourism pair must contain matching point arrays with at least 8 rows".into(),
         );
+    }
+    if pair.match_scores.len() != pair.points1.len()
+        || pair.match_scores.iter().any(|score| !score.is_finite())
+        || pair
+            .match_scores
+            .windows(2)
+            .any(|scores| scores[0] > scores[1])
+    {
+        return Err("PhotoTourism match scores must be finite and sorted best-first".into());
     }
     let mut points1 = DataMatrix::zeros(pair.points1.len(), 2);
     let mut points2 = DataMatrix::zeros(pair.points2.len(), 2);
