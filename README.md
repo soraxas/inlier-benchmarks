@@ -43,6 +43,18 @@ just prepare-homography
 just homography-smoke
 ```
 
+## Rigid-registration smoke benchmark
+
+The real rigid-registration smoke test uses the deterministic
+`rigid_pose_example_points.txt` and `rigid_pose_example_gt.txt` fixtures from
+`inlier-data`. It retains an evenly spaced 1,024-correspondence subset and
+uses a 0.2-unit residual threshold calibrated to the fixture's sensor noise.
+
+```bash
+just prepare-rigid
+just rigid-smoke
+```
+
 PhotoTourism's primary chart follows the SuperRANSAC convention: it ranks
 matches by the tutorial's error-like confidence, applies PROSAC consistently
 to every scoring mode, converts the estimated fundamental matrix to an

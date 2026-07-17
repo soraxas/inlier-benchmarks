@@ -24,6 +24,8 @@ struct Args {
     phototourism_input: Option<PathBuf>,
     #[arg(long)]
     homography_input: Option<PathBuf>,
+    #[arg(long)]
+    rigid_input: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -93,6 +95,22 @@ struct HomographyPair {
     points1: Vec<[f64; 2]>,
     points2: Vec<[f64; 2]>,
     homography: [[f64; 3]; 3],
+}
+
+#[derive(Deserialize)]
+struct RigidInput {
+    schema_version: u32,
+    dataset: String,
+    threshold: f64,
+    pairs: Vec<RigidPair>,
+}
+
+#[derive(Deserialize)]
+struct RigidPair {
+    scene: String,
+    points_src: Vec<[f64; 3]>,
+    points_tgt: Vec<[f64; 3]>,
+    transform: [[f64; 4]; 4],
 }
 
 #[derive(Clone, Copy)]
@@ -669,6 +687,80 @@ fn run_homography_fixture(
     })
 }
 
+fn run_rigid_fixture(
+    pair: &RigidPair,
+    threshold: f64,
+    settings: MetasacSettings,
+) -> Result<Outcome, String> {
+    if pair.points_src.len() != pair.points_tgt.len() || pair.points_src.len() < 3 {
+        return Err(
+            "rigid pair must contain matching 3D point arrays with at least three rows".into(),
+        );
+    }
+    let mut source = DataMatrix::zeros(pair.points_src.len(), 3);
+    let mut target = DataMatrix::zeros(pair.points_tgt.len(), 3);
+    for (index, (src, tgt)) in pair.points_src.iter().zip(&pair.points_tgt).enumerate() {
+        for dimension in 0..3 {
+            source.set(index, dimension, src[dimension]);
+            target.set(index, dimension, tgt[dimension]);
+        }
+    }
+    let rotation = Matrix3::new(
+        pair.transform[0][0],
+        pair.transform[0][1],
+        pair.transform[0][2],
+        pair.transform[1][0],
+        pair.transform[1][1],
+        pair.transform[1][2],
+        pair.transform[2][0],
+        pair.transform[2][1],
+        pair.transform[2][2],
+    );
+    let translation = Vector3::new(
+        pair.transform[0][3],
+        pair.transform[1][3],
+        pair.transform[2][3],
+    );
+    let truth: Vec<bool> = (0..pair.points_src.len())
+        .map(|index| {
+            let src = Vector3::new(
+                source.get(index, 0),
+                source.get(index, 1),
+                source.get(index, 2),
+            );
+            let tgt = Vector3::new(
+                target.get(index, 0),
+                target.get(index, 1),
+                target.get(index, 2),
+            );
+            (rotation * src + translation - tgt).norm() <= threshold
+        })
+        .collect();
+    let result = estimate_rigid_transform(&source, &target, threshold, Some(settings))?;
+    let error = normalized_median_residual(&truth, threshold, |index| {
+        let src = nalgebra::Point3::new(
+            source.get(index, 0),
+            source.get(index, 1),
+            source.get(index, 2),
+        );
+        let tgt = Vector3::new(
+            target.get(index, 0),
+            target.get(index, 1),
+            target.get(index, 2),
+        );
+        (result.model.rotation.transform_point(&src).coords + result.model.translation.vector - tgt)
+            .norm()
+    });
+    Ok(Outcome {
+        inliers: result.inliers,
+        iterations: result.iterations,
+        truth,
+        normalized_model_error: error,
+        epipolar_matrix: None,
+        homography_auc_3: None,
+    })
+}
+
 fn run_phototourism(
     estimator: &str,
     pair: &PhototourismPair,
@@ -944,6 +1036,89 @@ fn run_homography_suite(
     Ok(())
 }
 
+fn run_rigid_suite(
+    input: &RigidInput,
+    suite: &Suite,
+    args: &Args,
+    out: &mut fs::File,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if input.schema_version != 1 || input.threshold <= 0.0 {
+        return Err("unsupported rigid input schema or threshold".into());
+    }
+    let profiles: Vec<&String> = if args.smoke {
+        suite
+            .profiles
+            .iter()
+            .filter(|profile| profile.as_str() == "balanced")
+            .collect()
+    } else {
+        suite.profiles.iter().collect()
+    };
+    for pair in &input.pairs {
+        for mode in &suite.scoring_modes {
+            for profile in &profiles {
+                for index in 0..args.seeds {
+                    let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                    let start = Instant::now();
+                    let result = settings(profile, mode, seed)
+                        .and_then(|settings| run_rigid_fixture(pair, input.threshold, settings));
+                    let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                    let trial = match result {
+                        Ok(outcome) => {
+                            let (precision, recall, classification_error) =
+                                classification_score(&outcome.inliers, &outcome.truth);
+                            Trial {
+                                suite: input.dataset.clone(),
+                                suite_version: input.schema_version,
+                                estimator: "rigid_transform".into(),
+                                scoring_mode: mode.clone(),
+                                profile: (*profile).clone(),
+                                scene: pair.scene.clone(),
+                                seed,
+                                runtime_ms,
+                                iterations: outcome.iterations,
+                                inlier_precision: precision,
+                                inlier_recall: recall,
+                                normalized_model_error: outcome.normalized_model_error,
+                                inlier_classification_error: classification_error,
+                                epipolar_matrix: None,
+                                inlier_indices: Some(outcome.inliers),
+                                homography_auc_3: None,
+                                success: precision >= 0.9
+                                    && recall >= 0.9
+                                    && outcome.normalized_model_error <= 1.0,
+                                failure_reason: None,
+                            }
+                        }
+                        Err(reason) => Trial {
+                            suite: input.dataset.clone(),
+                            suite_version: input.schema_version,
+                            estimator: "rigid_transform".into(),
+                            scoring_mode: mode.clone(),
+                            profile: (*profile).clone(),
+                            scene: pair.scene.clone(),
+                            seed,
+                            runtime_ms,
+                            iterations: 0,
+                            inlier_precision: 0.,
+                            inlier_recall: 0.,
+                            normalized_model_error: f64::MAX,
+                            inlier_classification_error: 1.,
+                            epipolar_matrix: None,
+                            inlier_indices: None,
+                            homography_auc_3: None,
+                            success: false,
+                            failure_reason: Some(reason),
+                        },
+                    };
+                    writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let suite: Suite = toml::from_str(&fs::read_to_string(&args.suite)?)?;
@@ -959,6 +1134,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = &args.homography_input {
         let input: HomographyInput = serde_json::from_str(&fs::read_to_string(path)?)?;
         run_homography_suite(&input, &suite, &args, &mut out)?;
+        return Ok(());
+    }
+    if let Some(path) = &args.rigid_input {
+        let input: RigidInput = serde_json::from_str(&fs::read_to_string(path)?)?;
+        run_rigid_suite(&input, &suite, &args, &mut out)?;
         return Ok(());
     }
     let profiles: Vec<&String> = if args.smoke {

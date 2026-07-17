@@ -73,6 +73,16 @@ runs:
           --homography-input results/homography-input.json \
           --output results/homography.jsonl
         cat results/homography.jsonl >> results/raw.jsonl
+        uv run --no-project --with-editable ./inlier-data --with numpy \
+          python/prepare_rigid.py \
+          --cache-dir "$RUNNER_TEMP/inlier-data" \
+          --max-correspondences 1024 \
+          --output results/rigid-input.json
+        cargo run --release -- \
+          $real_args \
+          --rigid-input results/rigid-input.json \
+          --output results/rigid.jsonl
+        cat results/rigid.jsonl >> results/raw.jsonl
     - shell: bash
       run: |
         uv run --no-project --with numpy python/aggregate.py results/raw.jsonl results/summary.json

@@ -13,6 +13,12 @@ prepare-homography output="results/homography-input.json":
 homography-smoke input="results/homography-input.json":
   cargo run --release -- --suite {{suite}} --smoke --seeds 1 --homography-input {{input}} --output results/homography.jsonl
 
+prepare-rigid output="results/rigid-input.json":
+  uv run --no-project --with-editable ../inlier-data --with numpy python/prepare_rigid.py --output {{output}}
+
+rigid-smoke input="results/rigid-input.json":
+  cargo run --release -- --suite {{suite}} --smoke --seeds 1 --rigid-input {{input}} --output results/rigid.jsonl
+
 smoke:
   cargo run --release -- --suite {{suite}} --smoke --seeds 5 --output results/raw.jsonl
   uv run --no-project --with numpy python/aggregate.py results/raw.jsonl results/summary.json

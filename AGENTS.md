@@ -17,6 +17,11 @@ installed `inlier_data` Pooch registry, never copied into this repository.
   reads HPatchesSeq and EVD validation `matches.h5`, `match_conf.h5`, and
   `Hgt.h5`, preserves ascending tutorial-confidence order, and uses a 3-pixel
   forward-transfer threshold for labels and estimation.
+- Rigid-registration validation uses the small Pooch-managed
+  `rigid_pose_example_points.txt` and `rigid_pose_example_gt.txt` fixtures.
+  Its adapter selects 1,024 evenly spaced measured correspondences and uses a
+  0.2-unit residual threshold against the supplied transform; do not change
+  that threshold without recalibrating the sensor-noise distribution.
 - PhotoTourism is a real epipolar-geometry smoke benchmark. Its adapter uses
   `phototourism-ransac-val-v1.tar.zst`, extracts cached correspondences and
   `Fgt.h5`, ranks tutorial confidence values ascending because lower is better,
@@ -28,6 +33,8 @@ installed `inlier_data` Pooch registry, never copied into this repository.
 ```bash
 just prepare-phototourism
 just phototourism-smoke
+just prepare-rigid
+just rigid-smoke
 ```
 
 The first command requires `zstd`, `tar`, `h5py`, and a local `../inlier-data`
