@@ -56,11 +56,11 @@ just rigid-smoke
 ```
 
 PhotoTourism's primary chart follows the SuperRANSAC convention: it ranks
-matches by the tutorial's error-like confidence, applies PROSAC consistently
-to every scoring mode, converts the estimated fundamental matrix to an
-essential matrix using ground-truth intrinsics, recovers relative pose from the
-estimated inliers, and plots pose `AUC@10°` against average estimation time.
-The success-rate gate remains in the diagnostic table.
+matches by the tutorial's error-like confidence, compares uniform sampling and
+PROSAC under every scoring mode, converts the estimated fundamental matrix to
+an essential matrix using ground-truth intrinsics, recovers relative pose from
+the estimated inliers, and plots pose `AUC@10°` against average estimation
+time. The success-rate gate remains in the diagnostic table.
 
 The dashboard uses Plotly directly in the published HTML, rather than static
 Matplotlib images. Its primary plots expose trial-standard-error bars and

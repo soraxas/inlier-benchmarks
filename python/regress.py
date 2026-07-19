@@ -10,8 +10,18 @@ ITERATION_INCREASE = 0.20
 
 
 def index(summary: dict) -> dict[tuple[str, ...], dict]:
+    def key(row: dict) -> tuple[str, ...]:
+        return (
+            row.get("suite", "public-api"),
+            row["estimator"],
+            row["scoring_mode"],
+            row.get("sampler", "prosac"),
+            row["profile"],
+            row["scene"],
+        )
+
     return {
-        tuple(row.get(field, "public-api") if field == "suite" else row[field] for field in ("suite", "estimator", "scoring_mode", "profile", "scene")): row
+        key(row): row
         for row in summary["groups"]
     }
 

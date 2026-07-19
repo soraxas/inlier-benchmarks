@@ -25,8 +25,9 @@ installed `inlier_data` Pooch registry, never copied into this repository.
 - PhotoTourism is a real epipolar-geometry smoke benchmark. Its adapter uses
   `phototourism-ransac-val-v1.tar.zst`, extracts cached correspondences and
   `Fgt.h5`, ranks tutorial confidence values ascending because lower is better,
-  and writes deterministic inputs. The Rust runner uses the resulting order
-  with PROSAC for every scoring mode; do not shuffle these correspondences.
+  and writes deterministic inputs. The Rust runner compares uniform and PROSAC
+  for every scoring mode; do not shuffle these correspondences because PROSAC
+  consumes that confidence order.
 
 ## Running PhotoTourism
 

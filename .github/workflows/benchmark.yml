@@ -24,7 +24,10 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Full scheduled runs cover real fixtures, three budgets, two samplers,
+    # and 30 seeds. Keep PR smoke runs quick while allowing that statistical
+    # matrix to complete without being truncated at the old 15-minute limit.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
