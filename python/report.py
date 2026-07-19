@@ -31,6 +31,10 @@ def mode_label(mode: str) -> str:
     }.get(mode, mode)
 
 
+def sampler_label(sampler: str) -> str:
+    return {"uniform": "Uniform", "prosac": "PROSAC"}.get(sampler, sampler)
+
+
 def percentage(value: float | None) -> str:
     return f"{value:.1%}" if value is not None else "-"
 
@@ -60,6 +64,7 @@ def update_history(output: Path, dataset_rows: list[dict]) -> dict:
                     "suite",
                     "estimator",
                     "scoring_mode",
+                    "sampler",
                     "profile",
                     "trials",
                     "scene_count",
@@ -92,15 +97,15 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
     metric, metric_se, metric_label = quality_metric(suite)
     by_mode: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
-        by_mode[row["scoring_mode"]].append(row)
+        by_mode[f"{mode_label(row['scoring_mode'])} / {sampler_label(row['sampler'])}"].append(row)
     traces = []
-    for mode, points in sorted(by_mode.items()):
+    for label, points in sorted(by_mode.items()):
         points.sort(key=lambda row: PROFILE_ORDER.get(row["profile"], 99))
         traces.append(
             {
                 "type": "scatter",
                 "mode": "lines+markers",
-                "name": mode_label(mode),
+                "name": label,
                 "x": [point["mean_runtime_ms"] / 1_000.0 for point in points],
                 "y": [point[metric] for point in points],
                 "error_x": {
@@ -119,13 +124,22 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                     "symbol": [PROFILE_MARKERS.get(point["profile"], "circle") for point in points],
                 },
                 "customdata": [
-                    [point["profile"], point["trials"], point["scene_count"], point["success_rate"]]
+                    [
+                        point["profile"],
+                        point["trials"],
+                        point["scene_count"],
+                        point["success_rate"],
+                        point.get("mean_sampling_attempts"),
+                        point.get("mean_inlier_ratio"),
+                    ]
                     for point in points
                 ],
                 "hovertemplate": (
                     "%{fullData.name}<br>Budget: %{customdata[0]}<br>Time: %{x:.4f} s"
                     f"<br>{metric_label}: %{{y:.4f}}<br>Trials: %{{customdata[1]}}"
-                    "<br>Pairs: %{customdata[2]}<br>Success: %{customdata[3]:.1%}<extra></extra>"
+                    "<br>Pairs: %{customdata[2]}<br>Success: %{customdata[3]:.1%}"
+                    "<br>Mean sampler calls: %{customdata[4]:.1f}"
+                    "<br>Mean inlier ratio: %{customdata[5]:.1%}<extra></extra>"
                 ),
             }
         )
@@ -191,6 +205,7 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{html.escape(suite_label(row['suite']))}</td>"
         f"<td>{html.escape(row['estimator'])}</td>"
         f"<td>{html.escape(mode_label(row['scoring_mode']))}</td>"
+        f"<td>{html.escape(sampler_label(row['sampler']))}</td>"
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
         f"<td>{percentage(row[quality_metric(row['suite'])[0]])}</td>"
@@ -198,6 +213,8 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{row['median_normalized_model_error']:.3f}</td>"
         f"<td>{row['median_runtime_ms']:.3f}</td>"
         f"<td>{row['median_iterations']:.0f}</td>"
+        f"<td>{row.get('mean_sampling_attempts') or 0:.1f}</td>"
+        f"<td>{percentage(row.get('mean_inlier_ratio'))}</td>"
         "</tr>"
         for row in rows
         if row["suite"] != "public-api"
@@ -222,8 +239,8 @@ def main(summary_path: str, output_dir: str) -> None:
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p></div></div>"
         f"{''.join(plot_sections)}<h2>PhotoTourism Pair Diagnostics</h2><table><thead><tr>"
-        "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Profile</th><th>Scene</th>"
-        "<th>Quality AUC</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th>"
+        "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Sampler</th><th>Profile</th><th>Scene</th>"
+        "<th>Quality AUC</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th><th>Mean sampler calls</th><th>Mean inlier ratio</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table></main>"
         "<main id=history-panel class=panel hidden><div class=primer><div><h2>Comparable Full Runs</h2><p>Only scheduled and manually requested full runs are retained. Smoke runs are excluded because they use a different pair and seed budget. The x-axis uses the tested inlier commit; click a point to open that revision.</p></div><div><h2>Uncertainty</h2><p>AUC error bars are deterministic bootstrap standard errors over all pair-seed trials. Runtime error bars are standard errors over those trials.</p></div></div><div class=history-toolbar><label for=history-profile>Iteration budget</label><select id=history-profile><option value=balanced selected>Balanced</option><option value=fast>Fast</option><option value=thorough>Thorough</option></select></div><div class=history-grid><div id=history-auc class=history-chart></div><div id=history-runtime class=history-chart></div></div></main>"
         "<script>const benchmarkPlots="
@@ -232,7 +249,7 @@ def main(summary_path: str, output_dir: str) -> None:
         "const benchmarkHistory="
         f"{history_json};"
         "const tabs=document.querySelectorAll('[role=tab]');tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(other=>{const selected=other===tab;other.setAttribute('aria-selected',selected);document.getElementById(other.dataset.tab).hidden=!selected});if(tab.dataset.tab==='history-panel')renderHistory()}));"
-        "let historyRendered=false;const historyProfile=document.getElementById('history-profile');historyProfile.addEventListener('change',()=>{historyRendered=false;renderHistory()});const commitUrl=(repository,revision)=>`https://github.com/${repository}/commit/${revision}`;function renderHistory(){if(historyRendered)return;historyRendered=true;const revisions=[...new Set(benchmarkHistory.map(run=>run.revision.slice(0,7)))];const traces=(metric,errorMetric)=>{const series=new Map();for(const run of benchmarkHistory){for(const point of run.groups){if(point.profile!==historyProfile.value)continue;const key=[point.estimator,point.scoring_mode].join(' / ');if(!series.has(key))series.set(key,{x:[],y:[],customdata:[],error_y:{type:'data',array:[],visible:true},mode:'lines+markers',name:key,hovertemplate:'%{fullData.name}<br>Commit: %{x}<br>%{y:.4f}<br>Run: %{customdata[1]}<br>Click to open commit<extra></extra>'});const trace=series.get(key);trace.x.push(run.revision.slice(0,7));trace.y.push(point[metric]);trace.customdata.push([run.revision,run.run_id,run.repository||'soraxas/inlier-benchmarks']);trace.error_y.array.push(point[errorMetric]||0)}}return [...series.values()]};const layout=(title,yaxis)=>({title,font:{color:'#222'},paper_bgcolor:'#fff',plot_bgcolor:'#fff',xaxis:{title:'Inlier revision',type:'category',categoryorder:'array',categoryarray:revisions},yaxis:{title:yaxis,zeroline:false,gridcolor:'#e5e7eb'},legend:{orientation:'h'},margin:{l:70,r:20,t:55,b:70}});for(const [id,metric,errorMetric,title,yaxis] of [['history-auc','auc_pose_10','auc_pose_10_se','PhotoTourism pose AUC @ 10 degrees','Pose AUC @ 10 degrees'],['history-runtime','mean_runtime_ms','runtime_se_ms','PhotoTourism average estimation time','Average time [ms]']]){const chart=document.getElementById(id);Plotly.react(chart,traces(metric,errorMetric),layout(title,yaxis),{responsive:true,displaylogo:false});chart.removeAllListeners('plotly_click');chart.on('plotly_click',event=>{const [revision,,repository]=event.points[0].customdata;if(/^[0-9a-f]{7,40}$/.test(revision))window.open(commitUrl(repository,revision),'_blank','noopener')})}}</script>"
+        "let historyRendered=false;const historyProfile=document.getElementById('history-profile');historyProfile.addEventListener('change',()=>{historyRendered=false;renderHistory()});const commitUrl=(repository,revision)=>`https://github.com/${repository}/commit/${revision}`;function renderHistory(){if(historyRendered)return;historyRendered=true;const revisions=[...new Set(benchmarkHistory.map(run=>run.revision.slice(0,7)))];const traces=(metric,errorMetric)=>{const series=new Map();for(const run of benchmarkHistory){for(const point of run.groups){if(point.profile!==historyProfile.value)continue;const key=[point.estimator,point.scoring_mode,point.sampler].join(' / ');if(!series.has(key))series.set(key,{x:[],y:[],customdata:[],error_y:{type:'data',array:[],visible:true},mode:'lines+markers',name:key,hovertemplate:'%{fullData.name}<br>Commit: %{x}<br>%{y:.4f}<br>Run: %{customdata[1]}<br>Click to open commit<extra></extra>'});const trace=series.get(key);trace.x.push(run.revision.slice(0,7));trace.y.push(point[metric]);trace.customdata.push([run.revision,run.run_id,run.repository||'soraxas/inlier-benchmarks']);trace.error_y.array.push(point[errorMetric]||0)}}return [...series.values()]};const layout=(title,yaxis)=>({title,font:{color:'#222'},paper_bgcolor:'#fff',plot_bgcolor:'#fff',xaxis:{title:'Inlier revision',type:'category',categoryorder:'array',categoryarray:revisions},yaxis:{title:yaxis,zeroline:false,gridcolor:'#e5e7eb'},legend:{orientation:'h'},margin:{l:70,r:20,t:55,b:70}});for(const [id,metric,errorMetric,title,yaxis] of [['history-auc','auc_pose_10','auc_pose_10_se','PhotoTourism pose AUC @ 10 degrees','Pose AUC @ 10 degrees'],['history-runtime','mean_runtime_ms','runtime_se_ms','PhotoTourism average estimation time','Average time [ms]']]){const chart=document.getElementById(id);Plotly.react(chart,traces(metric,errorMetric),layout(title,yaxis),{responsive:true,displaylogo:false});chart.removeAllListeners('plotly_click');chart.on('plotly_click',event=>{const [revision,,repository]=event.points[0].customdata;if(/^[0-9a-f]{7,40}$/.test(revision))window.open(commitUrl(repository,revision),'_blank','noopener')})}}</script>"
     )
     (output / "latest.json").write_text(json.dumps(summary, indent=2) + "\n")
     markdown = ["## Benchmark Smoke Summary", "", "| Dataset / estimator | Mode | Scene | Success | Model error | Iterations |", "|---|---|---|---:|---:|---:|"]

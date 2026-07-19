@@ -90,6 +90,7 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
             for trial in trials
             if trial.get("homography_auc_3") is not None
         ]
+        diagnostics = [trial["diagnostics"] for trial in trials if trial.get("diagnostics")]
         summary.update(
             {
                 "trials": len(trials),
@@ -116,6 +117,36 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
                 "auc_homography_3_se": standard_error(homography_aucs)
                 if homography_aucs
                 else None,
+                "mean_sampling_attempts": statistics.fmean(
+                    diagnostic["sampling_attempts"] for diagnostic in diagnostics
+                )
+                if diagnostics
+                else None,
+                "mean_rejected_samples": statistics.fmean(
+                    diagnostic["rejected_samples"] for diagnostic in diagnostics
+                )
+                if diagnostics
+                else None,
+                "mean_model_estimation_failures": statistics.fmean(
+                    diagnostic["model_estimation_failures"] for diagnostic in diagnostics
+                )
+                if diagnostics
+                else None,
+                "mean_scored_models": statistics.fmean(
+                    diagnostic["scored_models"] for diagnostic in diagnostics
+                )
+                if diagnostics
+                else None,
+                "mean_local_optimization_runs": statistics.fmean(
+                    diagnostic["local_optimization_runs"] for diagnostic in diagnostics
+                )
+                if diagnostics
+                else None,
+                "mean_inlier_ratio": statistics.fmean(
+                    diagnostic["inlier_ratio"] for diagnostic in diagnostics
+                )
+                if diagnostics
+                else None,
             }
         )
         summaries.append(summary)
@@ -124,10 +155,16 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
 
 def main(raw_path: str, output_path: str) -> None:
     records = [json.loads(line) for line in Path(raw_path).read_text().splitlines() if line]
+    # The original benchmark runner always used PROSAC but did not serialize it.
+    # Preserve those historic artifacts as a separately labelled baseline.
+    for record in records:
+        record.setdefault("sampler", "prosac")
     summaries = summarize(
-        records, ("suite", "estimator", "scoring_mode", "profile", "scene")
+        records, ("suite", "estimator", "scoring_mode", "sampler", "profile", "scene")
     )
-    dataset_summaries = summarize(records, ("suite", "estimator", "scoring_mode", "profile"))
+    dataset_summaries = summarize(
+        records, ("suite", "estimator", "scoring_mode", "sampler", "profile")
+    )
 
     frontiers = {}
     for suite in sorted({row["suite"] for row in summaries}):

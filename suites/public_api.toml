@@ -12,6 +12,6 @@ estimators = [
   "rigid_transform",
 ]
 scoring_modes = ["ransac", "msac", "magsac", "magsac_pp"]
+samplers = ["uniform", "prosac"]
 scenes = ["clean", "noisy", "outliers"]
 profiles = ["fast", "balanced", "thorough"]
-

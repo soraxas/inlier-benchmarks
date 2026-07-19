@@ -34,6 +34,7 @@ struct Suite {
     name: String,
     estimators: Vec<String>,
     scoring_modes: Vec<String>,
+    samplers: Vec<String>,
     scenes: Vec<String>,
     profiles: Vec<String>,
 }
@@ -44,6 +45,7 @@ struct Trial {
     suite_version: u32,
     estimator: String,
     scoring_mode: String,
+    sampler: String,
     profile: String,
     scene: String,
     seed: u64,
@@ -56,8 +58,23 @@ struct Trial {
     epipolar_matrix: Option<[[f64; 3]; 3]>,
     inlier_indices: Option<Vec<usize>>,
     homography_auc_3: Option<f64>,
+    diagnostics: Option<TrialDiagnostics>,
     success: bool,
     failure_reason: Option<String>,
+}
+
+/// Execution counters emitted by the estimator, normalized for JSONL output.
+#[derive(Clone, Serialize)]
+struct TrialDiagnostics {
+    sampling_attempts: usize,
+    rejected_samples: usize,
+    model_estimation_failures: usize,
+    candidate_models: usize,
+    rejected_models: usize,
+    scored_models: usize,
+    local_optimization_runs: usize,
+    final_optimization_runs: usize,
+    inlier_ratio: f64,
 }
 
 #[derive(Deserialize)]
@@ -158,7 +175,12 @@ impl Rng {
     }
 }
 
-fn settings(profile: &str, scoring: &str, seed: u64) -> Result<MetasacSettings, String> {
+fn settings(
+    profile: &str,
+    scoring: &str,
+    sampler: &str,
+    seed: u64,
+) -> Result<MetasacSettings, String> {
     let (iterations, confidence) = match profile {
         "fast" => (250, 0.95),
         "balanced" => (1_000, 0.99),
@@ -172,6 +194,11 @@ fn settings(profile: &str, scoring: &str, seed: u64) -> Result<MetasacSettings, 
         "magsac_pp" => ScoringType::MagsacPlusPlus,
         _ => return Err(format!("unknown scoring mode {scoring}")),
     };
+    let sampler = match sampler {
+        "uniform" => SamplerType::Uniform,
+        "prosac" => SamplerType::Prosac,
+        _ => return Err(format!("unknown sampler {sampler}")),
+    };
     Ok(MetasacSettings {
         min_iterations: iterations,
         max_iterations: iterations,
@@ -181,7 +208,7 @@ fn settings(profile: &str, scoring: &str, seed: u64) -> Result<MetasacSettings, 
         max_sampling_attempts: 1,
         confidence,
         rng_seed: Some(seed),
-        sampler: SamplerType::Prosac,
+        sampler,
         scoring,
         ..Default::default()
     })
@@ -425,6 +452,25 @@ struct Outcome {
     normalized_model_error: f64,
     epipolar_matrix: Option<[[f64; 3]; 3]>,
     homography_auc_3: Option<f64>,
+    diagnostics: TrialDiagnostics,
+}
+
+fn trial_diagnostics(
+    diagnostics: &inlier::core::MetaSacDiagnostics,
+    inlier_count: usize,
+    point_count: usize,
+) -> TrialDiagnostics {
+    TrialDiagnostics {
+        sampling_attempts: diagnostics.sampling_attempts,
+        rejected_samples: diagnostics.rejected_samples,
+        model_estimation_failures: diagnostics.model_estimation_failures,
+        candidate_models: diagnostics.candidate_models,
+        rejected_models: diagnostics.rejected_models,
+        scored_models: diagnostics.scored_models,
+        local_optimization_runs: diagnostics.local_optimization_runs,
+        final_optimization_runs: diagnostics.final_optimization_runs,
+        inlier_ratio: inlier_count as f64 / point_count.max(1) as f64,
+    }
 }
 
 fn run(
@@ -448,6 +494,7 @@ fn run(
                     .norm()
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -468,6 +515,7 @@ fn run(
                 .abs()
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -488,6 +536,7 @@ fn run(
                 .abs()
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -508,6 +557,7 @@ fn run(
                 )
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -523,6 +573,7 @@ fn run(
                 r.model.distance_to_point(a.get(index, 0), a.get(index, 1))
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -539,6 +590,7 @@ fn run(
                     .distance(a.get(index, 0), a.get(index, 1), a.get(index, 2))
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -560,6 +612,7 @@ fn run(
                     .norm()
             });
             Ok(Outcome {
+                diagnostics: trial_diagnostics(&r.diagnostics, r.inliers.len(), t.len()),
                 inliers: r.inliers,
                 iterations: r.iterations,
                 truth: t,
@@ -679,6 +732,7 @@ fn run_homography_fixture(
         })
         .collect();
     Ok(Outcome {
+        diagnostics: trial_diagnostics(&result.diagnostics, result.inliers.len(), truth.len()),
         inliers: result.inliers,
         iterations: result.iterations,
         truth,
@@ -753,6 +807,7 @@ fn run_rigid_fixture(
             .norm()
     });
     Ok(Outcome {
+        diagnostics: trial_diagnostics(&result.diagnostics, result.inliers.len(), truth.len()),
         inliers: result.inliers,
         iterations: result.iterations,
         truth,
@@ -813,6 +868,7 @@ fn run_phototourism(
             .abs()
         });
         return Ok(Outcome {
+            diagnostics: trial_diagnostics(&result.diagnostics, result.inliers.len(), truth.len()),
             inliers: result.inliers,
             iterations: result.iterations,
             truth,
@@ -867,6 +923,7 @@ fn run_phototourism(
         .abs()
     });
     Ok(Outcome {
+        diagnostics: trial_diagnostics(&result.diagnostics, result.inliers.len(), truth.len()),
         inliers: result.inliers,
         iterations: result.iterations,
         truth,
@@ -897,63 +954,70 @@ fn run_phototourism_suite(
     for estimator in ["fundamental", "essential"] {
         for pair in &input.pairs {
             for mode in &suite.scoring_modes {
-                for profile in &profiles {
-                    for index in 0..args.seeds {
-                        let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
-                        let start = Instant::now();
-                        let result = settings(profile, mode, seed).and_then(|settings| {
-                            run_phototourism(estimator, pair, input.threshold, settings)
-                        });
-                        let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
-                        let trial = match result {
-                            Ok(outcome) => {
-                                let (precision, recall, classification_error) =
-                                    classification_score(&outcome.inliers, &outcome.truth);
-                                Trial {
+                for sampler in &suite.samplers {
+                    for profile in &profiles {
+                        for index in 0..args.seeds {
+                            let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                            let start = Instant::now();
+                            let result =
+                                settings(profile, mode, sampler, seed).and_then(|settings| {
+                                    run_phototourism(estimator, pair, input.threshold, settings)
+                                });
+                            let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                            let trial = match result {
+                                Ok(outcome) => {
+                                    let (precision, recall, classification_error) =
+                                        classification_score(&outcome.inliers, &outcome.truth);
+                                    Trial {
+                                        suite: input.dataset.clone(),
+                                        suite_version: input.schema_version,
+                                        estimator: estimator.into(),
+                                        scoring_mode: mode.clone(),
+                                        sampler: sampler.clone(),
+                                        profile: (*profile).clone(),
+                                        scene: format!("{}/{}", pair.scene, pair.pair),
+                                        seed,
+                                        runtime_ms,
+                                        iterations: outcome.iterations,
+                                        inlier_precision: precision,
+                                        inlier_recall: recall,
+                                        normalized_model_error: outcome.normalized_model_error,
+                                        inlier_classification_error: classification_error,
+                                        epipolar_matrix: outcome.epipolar_matrix,
+                                        inlier_indices: Some(outcome.inliers),
+                                        homography_auc_3: outcome.homography_auc_3,
+                                        diagnostics: Some(outcome.diagnostics),
+                                        success: precision >= 0.9
+                                            && recall >= 0.9
+                                            && outcome.normalized_model_error <= 1.0,
+                                        failure_reason: None,
+                                    }
+                                }
+                                Err(reason) => Trial {
                                     suite: input.dataset.clone(),
                                     suite_version: input.schema_version,
                                     estimator: estimator.into(),
                                     scoring_mode: mode.clone(),
+                                    sampler: sampler.clone(),
                                     profile: (*profile).clone(),
                                     scene: format!("{}/{}", pair.scene, pair.pair),
                                     seed,
                                     runtime_ms,
-                                    iterations: outcome.iterations,
-                                    inlier_precision: precision,
-                                    inlier_recall: recall,
-                                    normalized_model_error: outcome.normalized_model_error,
-                                    inlier_classification_error: classification_error,
-                                    epipolar_matrix: outcome.epipolar_matrix,
-                                    inlier_indices: Some(outcome.inliers),
-                                    homography_auc_3: outcome.homography_auc_3,
-                                    success: precision >= 0.9
-                                        && recall >= 0.9
-                                        && outcome.normalized_model_error <= 1.0,
-                                    failure_reason: None,
-                                }
-                            }
-                            Err(reason) => Trial {
-                                suite: input.dataset.clone(),
-                                suite_version: input.schema_version,
-                                estimator: estimator.into(),
-                                scoring_mode: mode.clone(),
-                                profile: (*profile).clone(),
-                                scene: format!("{}/{}", pair.scene, pair.pair),
-                                seed,
-                                runtime_ms,
-                                iterations: 0,
-                                inlier_precision: 0.,
-                                inlier_recall: 0.,
-                                normalized_model_error: f64::MAX,
-                                inlier_classification_error: 1.,
-                                epipolar_matrix: None,
-                                inlier_indices: None,
-                                homography_auc_3: None,
-                                success: false,
-                                failure_reason: Some(reason),
-                            },
-                        };
-                        writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                                    iterations: 0,
+                                    inlier_precision: 0.,
+                                    inlier_recall: 0.,
+                                    normalized_model_error: f64::MAX,
+                                    inlier_classification_error: 1.,
+                                    epipolar_matrix: None,
+                                    inlier_indices: None,
+                                    homography_auc_3: None,
+                                    diagnostics: None,
+                                    success: false,
+                                    failure_reason: Some(reason),
+                                },
+                            };
+                            writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                        }
                     }
                 }
             }
@@ -982,63 +1046,69 @@ fn run_homography_suite(
     };
     for pair in &input.pairs {
         for mode in &suite.scoring_modes {
-            for profile in &profiles {
-                for index in 0..args.seeds {
-                    let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
-                    let start = Instant::now();
-                    let result = settings(profile, mode, seed).and_then(|settings| {
-                        run_homography_fixture(pair, input.threshold, settings)
-                    });
-                    let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
-                    let trial = match result {
-                        Ok(outcome) => {
-                            let (precision, recall, classification_error) =
-                                classification_score(&outcome.inliers, &outcome.truth);
-                            Trial {
+            for sampler in &suite.samplers {
+                for profile in &profiles {
+                    for index in 0..args.seeds {
+                        let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                        let start = Instant::now();
+                        let result = settings(profile, mode, sampler, seed).and_then(|settings| {
+                            run_homography_fixture(pair, input.threshold, settings)
+                        });
+                        let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                        let trial = match result {
+                            Ok(outcome) => {
+                                let (precision, recall, classification_error) =
+                                    classification_score(&outcome.inliers, &outcome.truth);
+                                Trial {
+                                    suite: input.dataset.clone(),
+                                    suite_version: input.schema_version,
+                                    estimator: "homography".into(),
+                                    scoring_mode: mode.clone(),
+                                    sampler: sampler.clone(),
+                                    profile: (*profile).clone(),
+                                    scene: format!("{}/{}", pair.dataset, pair.pair),
+                                    seed,
+                                    runtime_ms,
+                                    iterations: outcome.iterations,
+                                    inlier_precision: precision,
+                                    inlier_recall: recall,
+                                    normalized_model_error: outcome.normalized_model_error,
+                                    inlier_classification_error: classification_error,
+                                    epipolar_matrix: None,
+                                    inlier_indices: Some(outcome.inliers),
+                                    homography_auc_3: outcome.homography_auc_3,
+                                    diagnostics: Some(outcome.diagnostics),
+                                    success: precision >= 0.9
+                                        && recall >= 0.9
+                                        && outcome.normalized_model_error <= 1.0,
+                                    failure_reason: None,
+                                }
+                            }
+                            Err(reason) => Trial {
                                 suite: input.dataset.clone(),
                                 suite_version: input.schema_version,
                                 estimator: "homography".into(),
                                 scoring_mode: mode.clone(),
+                                sampler: sampler.clone(),
                                 profile: (*profile).clone(),
                                 scene: format!("{}/{}", pair.dataset, pair.pair),
                                 seed,
                                 runtime_ms,
-                                iterations: outcome.iterations,
-                                inlier_precision: precision,
-                                inlier_recall: recall,
-                                normalized_model_error: outcome.normalized_model_error,
-                                inlier_classification_error: classification_error,
+                                iterations: 0,
+                                inlier_precision: 0.,
+                                inlier_recall: 0.,
+                                normalized_model_error: f64::MAX,
+                                inlier_classification_error: 1.,
                                 epipolar_matrix: None,
-                                inlier_indices: Some(outcome.inliers),
-                                homography_auc_3: outcome.homography_auc_3,
-                                success: precision >= 0.9
-                                    && recall >= 0.9
-                                    && outcome.normalized_model_error <= 1.0,
-                                failure_reason: None,
-                            }
-                        }
-                        Err(reason) => Trial {
-                            suite: input.dataset.clone(),
-                            suite_version: input.schema_version,
-                            estimator: "homography".into(),
-                            scoring_mode: mode.clone(),
-                            profile: (*profile).clone(),
-                            scene: format!("{}/{}", pair.dataset, pair.pair),
-                            seed,
-                            runtime_ms,
-                            iterations: 0,
-                            inlier_precision: 0.,
-                            inlier_recall: 0.,
-                            normalized_model_error: f64::MAX,
-                            inlier_classification_error: 1.,
-                            epipolar_matrix: None,
-                            inlier_indices: None,
-                            homography_auc_3: None,
-                            success: false,
-                            failure_reason: Some(reason),
-                        },
-                    };
-                    writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                                inlier_indices: None,
+                                homography_auc_3: None,
+                                diagnostics: None,
+                                success: false,
+                                failure_reason: Some(reason),
+                            },
+                        };
+                        writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                    }
                 }
             }
         }
@@ -1066,62 +1136,69 @@ fn run_rigid_suite(
     };
     for pair in &input.pairs {
         for mode in &suite.scoring_modes {
-            for profile in &profiles {
-                for index in 0..args.seeds {
-                    let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
-                    let start = Instant::now();
-                    let result = settings(profile, mode, seed)
-                        .and_then(|settings| run_rigid_fixture(pair, input.threshold, settings));
-                    let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
-                    let trial = match result {
-                        Ok(outcome) => {
-                            let (precision, recall, classification_error) =
-                                classification_score(&outcome.inliers, &outcome.truth);
-                            Trial {
+            for sampler in &suite.samplers {
+                for profile in &profiles {
+                    for index in 0..args.seeds {
+                        let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                        let start = Instant::now();
+                        let result = settings(profile, mode, sampler, seed).and_then(|settings| {
+                            run_rigid_fixture(pair, input.threshold, settings)
+                        });
+                        let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                        let trial = match result {
+                            Ok(outcome) => {
+                                let (precision, recall, classification_error) =
+                                    classification_score(&outcome.inliers, &outcome.truth);
+                                Trial {
+                                    suite: input.dataset.clone(),
+                                    suite_version: input.schema_version,
+                                    estimator: "rigid_transform".into(),
+                                    scoring_mode: mode.clone(),
+                                    sampler: sampler.clone(),
+                                    profile: (*profile).clone(),
+                                    scene: pair.scene.clone(),
+                                    seed,
+                                    runtime_ms,
+                                    iterations: outcome.iterations,
+                                    inlier_precision: precision,
+                                    inlier_recall: recall,
+                                    normalized_model_error: outcome.normalized_model_error,
+                                    inlier_classification_error: classification_error,
+                                    epipolar_matrix: None,
+                                    inlier_indices: Some(outcome.inliers),
+                                    homography_auc_3: None,
+                                    diagnostics: Some(outcome.diagnostics),
+                                    success: precision >= 0.9
+                                        && recall >= 0.9
+                                        && outcome.normalized_model_error <= 1.0,
+                                    failure_reason: None,
+                                }
+                            }
+                            Err(reason) => Trial {
                                 suite: input.dataset.clone(),
                                 suite_version: input.schema_version,
                                 estimator: "rigid_transform".into(),
                                 scoring_mode: mode.clone(),
+                                sampler: sampler.clone(),
                                 profile: (*profile).clone(),
                                 scene: pair.scene.clone(),
                                 seed,
                                 runtime_ms,
-                                iterations: outcome.iterations,
-                                inlier_precision: precision,
-                                inlier_recall: recall,
-                                normalized_model_error: outcome.normalized_model_error,
-                                inlier_classification_error: classification_error,
+                                iterations: 0,
+                                inlier_precision: 0.,
+                                inlier_recall: 0.,
+                                normalized_model_error: f64::MAX,
+                                inlier_classification_error: 1.,
                                 epipolar_matrix: None,
-                                inlier_indices: Some(outcome.inliers),
+                                inlier_indices: None,
                                 homography_auc_3: None,
-                                success: precision >= 0.9
-                                    && recall >= 0.9
-                                    && outcome.normalized_model_error <= 1.0,
-                                failure_reason: None,
-                            }
-                        }
-                        Err(reason) => Trial {
-                            suite: input.dataset.clone(),
-                            suite_version: input.schema_version,
-                            estimator: "rigid_transform".into(),
-                            scoring_mode: mode.clone(),
-                            profile: (*profile).clone(),
-                            scene: pair.scene.clone(),
-                            seed,
-                            runtime_ms,
-                            iterations: 0,
-                            inlier_precision: 0.,
-                            inlier_recall: 0.,
-                            normalized_model_error: f64::MAX,
-                            inlier_classification_error: 1.,
-                            epipolar_matrix: None,
-                            inlier_indices: None,
-                            homography_auc_3: None,
-                            success: false,
-                            failure_reason: Some(reason),
-                        },
-                    };
-                    writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                                diagnostics: None,
+                                success: false,
+                                failure_reason: Some(reason),
+                            },
+                        };
+                        writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                    }
                 }
             }
         }
@@ -1162,68 +1239,75 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     for estimator in &suite.estimators {
         for mode in &suite.scoring_modes {
-            for scene_name in suite
-                .scenes
-                .iter()
-                .filter(|scene| !args.smoke || scene.as_str() == "outliers")
-            {
-                let scene = Scene::parse(scene_name).ok_or("unknown scene")?;
-                for profile in &profiles {
-                    for index in 0..args.seeds {
-                        let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
-                        let start = Instant::now();
-                        let result = settings(profile, mode, seed)
-                            .and_then(|s| run(estimator, scene, s, seed));
-                        let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
-                        let trial = match result {
-                            Ok(outcome) => {
-                                let (p, r, classification_error) =
-                                    classification_score(&outcome.inliers, &outcome.truth);
-                                let success =
-                                    p >= 0.9 && r >= 0.9 && outcome.normalized_model_error <= 1.0;
-                                Trial {
+            for sampler in &suite.samplers {
+                for scene_name in suite
+                    .scenes
+                    .iter()
+                    .filter(|scene| !args.smoke || scene.as_str() == "outliers")
+                {
+                    let scene = Scene::parse(scene_name).ok_or("unknown scene")?;
+                    for profile in &profiles {
+                        for index in 0..args.seeds {
+                            let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                            let start = Instant::now();
+                            let result = settings(profile, mode, sampler, seed)
+                                .and_then(|s| run(estimator, scene, s, seed));
+                            let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                            let trial = match result {
+                                Ok(outcome) => {
+                                    let (p, r, classification_error) =
+                                        classification_score(&outcome.inliers, &outcome.truth);
+                                    let success = p >= 0.9
+                                        && r >= 0.9
+                                        && outcome.normalized_model_error <= 1.0;
+                                    Trial {
+                                        suite: suite.name.clone(),
+                                        suite_version: suite.version,
+                                        estimator: estimator.clone(),
+                                        scoring_mode: mode.clone(),
+                                        sampler: sampler.clone(),
+                                        profile: (*profile).clone(),
+                                        scene: scene_name.clone(),
+                                        seed,
+                                        runtime_ms,
+                                        iterations: outcome.iterations,
+                                        inlier_precision: p,
+                                        inlier_recall: r,
+                                        normalized_model_error: outcome.normalized_model_error,
+                                        inlier_classification_error: classification_error,
+                                        epipolar_matrix: None,
+                                        inlier_indices: None,
+                                        homography_auc_3: outcome.homography_auc_3,
+                                        diagnostics: Some(outcome.diagnostics),
+                                        success,
+                                        failure_reason: None,
+                                    }
+                                }
+                                Err(reason) => Trial {
                                     suite: suite.name.clone(),
                                     suite_version: suite.version,
                                     estimator: estimator.clone(),
                                     scoring_mode: mode.clone(),
+                                    sampler: sampler.clone(),
                                     profile: (*profile).clone(),
                                     scene: scene_name.clone(),
                                     seed,
                                     runtime_ms,
-                                    iterations: outcome.iterations,
-                                    inlier_precision: p,
-                                    inlier_recall: r,
-                                    normalized_model_error: outcome.normalized_model_error,
-                                    inlier_classification_error: classification_error,
+                                    iterations: 0,
+                                    inlier_precision: 0.,
+                                    inlier_recall: 0.,
+                                    normalized_model_error: f64::MAX,
+                                    inlier_classification_error: 1.,
                                     epipolar_matrix: None,
                                     inlier_indices: None,
-                                    homography_auc_3: outcome.homography_auc_3,
-                                    success,
-                                    failure_reason: None,
-                                }
-                            }
-                            Err(reason) => Trial {
-                                suite: suite.name.clone(),
-                                suite_version: suite.version,
-                                estimator: estimator.clone(),
-                                scoring_mode: mode.clone(),
-                                profile: (*profile).clone(),
-                                scene: scene_name.clone(),
-                                seed,
-                                runtime_ms,
-                                iterations: 0,
-                                inlier_precision: 0.,
-                                inlier_recall: 0.,
-                                normalized_model_error: f64::MAX,
-                                inlier_classification_error: 1.,
-                                epipolar_matrix: None,
-                                inlier_indices: None,
-                                homography_auc_3: None,
-                                success: false,
-                                failure_reason: Some(reason),
-                            },
-                        };
-                        writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                                    homography_auc_3: None,
+                                    diagnostics: None,
+                                    success: false,
+                                    failure_reason: Some(reason),
+                                },
+                            };
+                            writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                        }
                     }
                 }
             }
@@ -1234,7 +1318,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{classification_score, normalized_median_residual};
+    use super::{classification_score, normalized_median_residual, settings};
+    use inlier::settings::SamplerType;
 
     #[test]
     fn classification_score_requires_precision_and_recall() {
@@ -1254,5 +1339,18 @@ mod tests {
         let truth = [true, false, true, true];
         let error = normalized_median_residual(&truth, 0.5, |index| [0.1, 100.0, 0.2, 0.4][index]);
         assert!((error - 0.4).abs() < 1e-12);
+    }
+
+    #[test]
+    fn benchmark_settings_select_the_requested_sampler() {
+        assert_eq!(
+            settings("fast", "ransac", "uniform", 1).unwrap().sampler,
+            SamplerType::Uniform
+        );
+        assert_eq!(
+            settings("fast", "ransac", "prosac", 1).unwrap().sampler,
+            SamplerType::Prosac
+        );
+        assert!(settings("fast", "ransac", "unknown", 1).is_err());
     }
 }
