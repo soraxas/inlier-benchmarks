@@ -28,6 +28,7 @@ def mode_label(mode: str) -> str:
         "msac": "MSAC",
         "magsac": "MAGSAC",
         "magsac_pp": "MAGSAC++",
+        "opencv_usac_magsac": "OpenCV USAC_MAGSAC",
     }.get(mode, mode)
 
 
@@ -37,6 +38,18 @@ def sampler_label(sampler: str) -> str:
 
 def percentage(value: float | None) -> str:
     return f"{value:.1%}" if value is not None else "-"
+
+
+def paired_delta(row: dict) -> str:
+    value = row.get("paired_auc_delta_vs_fast")
+    samples = row.get("paired_auc_samples", 0)
+    if value is None or not samples:
+        return "-"
+    error = row.get("paired_auc_delta_vs_fast_se")
+    rendered = f"{value:+.3f}"
+    if error is not None:
+        rendered += f" +/- {error:.3f}"
+    return f"{rendered} (n={samples})"
 
 
 def update_history(output: Path, dataset_rows: list[dict]) -> dict:
@@ -131,6 +144,9 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                         point["success_rate"],
                         point.get("mean_sampling_attempts"),
                         point.get("mean_inlier_ratio"),
+                        point.get("paired_auc_delta_vs_fast"),
+                        point.get("paired_auc_delta_vs_fast_se"),
+                        point.get("paired_auc_samples"),
                     ]
                     for point in points
                 ],
@@ -139,7 +155,9 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                     f"<br>{metric_label}: %{{y:.4f}}<br>Trials: %{{customdata[1]}}"
                     "<br>Pairs: %{customdata[2]}<br>Success: %{customdata[3]:.1%}"
                     "<br>Mean sampler calls: %{customdata[4]:.1f}"
-                    "<br>Mean inlier ratio: %{customdata[5]:.1%}<extra></extra>"
+                    "<br>Mean inlier ratio: %{customdata[5]:.1%}"
+                    "<br>Paired AUC delta vs fast: %{customdata[6]:+.3f} +/- %{customdata[7]:.3f}"
+                    " (n=%{customdata[8]})<extra></extra>"
                 ),
             }
         )
@@ -150,7 +168,17 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
             "paper_bgcolor": "#fff",
             "plot_bgcolor": "#fff",
             "font": {"color": "#222"},
-            "colorway": ["#2563eb", "#f97316", "#16a34a", "#dc2626"],
+            "colorway": [
+                "#2563eb",
+                "#f97316",
+                "#16a34a",
+                "#dc2626",
+                "#7c3aed",
+                "#0891b2",
+                "#ca8a04",
+                "#be123c",
+                "#4d7c0f",
+            ],
             "hovermode": "closest",
             "xaxis": {
                 "title": "Average time [s]",
@@ -209,6 +237,7 @@ def main(summary_path: str, output_dir: str) -> None:
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
         f"<td>{percentage(row[quality_metric(row['suite'])[0]])}</td>"
+        f"<td>{paired_delta(row)}</td>"
         f"<td>{row['success_rate']:.1%}</td>"
         f"<td>{row['median_normalized_model_error']:.3f}</td>"
         f"<td>{row['median_runtime_ms']:.3f}</td>"
@@ -235,12 +264,13 @@ def main(summary_path: str, output_dir: str) -> None:
         "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and left is better.</p></header>"
         "<nav class=tabs role=tablist aria-label='Benchmark views'><button role=tab aria-selected=true aria-controls=quality-panel data-tab=quality-panel>Current results</button><button role=tab aria-selected=false aria-controls=history-panel data-tab=history-panel>Historical regression</button></nav>"
         "<main id=quality-panel class=panel><div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism follows the SuperRANSAC convention: pose AUC@10 degrees on the y-axis and average estimation time in seconds on a logarithmic x-axis. Homography validation uses transfer AUC@3 pixels against its ground-truth homography. Standard-error bars show trial variability.</p>"
-        "<p>Triangle, circle, and square markers denote fast, balanced, and thorough iteration budgets. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
+        "<p>Triangle, circle, and square markers denote fast, balanced, and thorough iteration budgets. The paired AUC delta column compares each point with fast using the identical scene and RNG seed; it separates a real budget effect from unmatched trial variance. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
-        "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p></div></div>"
+        "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p>"
+        "<p><b>OpenCV USAC_MAGSAC</b> is an independent reference run on the identical input pairs, thresholds, profiles, and seeds. Its timed region contains only OpenCV's robust-estimation call.</p></div></div>"
         f"{''.join(plot_sections)}<h2>PhotoTourism Pair Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Sampler</th><th>Profile</th><th>Scene</th>"
-        "<th>Quality AUC</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th><th>Mean sampler calls</th><th>Mean inlier ratio</th>"
+        "<th>Quality AUC</th><th>Paired delta vs fast</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th><th>Mean sampler calls</th><th>Mean inlier ratio</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table></main>"
         "<main id=history-panel class=panel hidden><div class=primer><div><h2>Comparable Full Runs</h2><p>Only scheduled and manually requested full runs are retained. Smoke runs are excluded because they use a different pair and seed budget. The x-axis uses the tested inlier commit; click a point to open that revision.</p></div><div><h2>Uncertainty</h2><p>AUC error bars are deterministic bootstrap standard errors over all pair-seed trials. Runtime error bars are standard errors over those trials.</p></div></div><div class=history-toolbar><label for=history-profile>Iteration budget</label><select id=history-profile><option value=balanced selected>Balanced</option><option value=fast>Fast</option><option value=thorough>Thorough</option></select></div><div class=history-grid><div id=history-auc class=history-chart></div><div id=history-runtime class=history-chart></div></div></main>"
         "<script>const benchmarkPlots="

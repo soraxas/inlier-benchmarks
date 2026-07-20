@@ -50,6 +50,50 @@ def pose_auc_standard_error(errors: list[float]) -> float | None:
     return statistics.stdev(samples)
 
 
+def paired_quality_delta(
+    suite: str, pairs: list[tuple[dict, dict]]
+) -> tuple[float | None, float | None, int]:
+    """Return quality(target) - quality(fast) from matched scene/seed trials."""
+    if not pairs:
+        return None, None, 0
+    if suite == "homography-ransac-val":
+        deltas = [
+            target["homography_auc_3"] - baseline["homography_auc_3"]
+            for target, baseline in pairs
+            if target.get("homography_auc_3") is not None
+            and baseline.get("homography_auc_3") is not None
+        ]
+        return (
+            statistics.fmean(deltas) if deltas else None,
+            standard_error(deltas) if deltas else None,
+            len(deltas),
+        )
+
+    if suite == "phototourism-val":
+        errors = [
+            (target.get("pose_error_deg"), baseline.get("pose_error_deg"))
+            for target, baseline in pairs
+            if target.get("pose_error_deg") is not None
+            and baseline.get("pose_error_deg") is not None
+        ]
+        if not errors:
+            return None, None, 0
+        point_estimate = pose_auc_at_10([target for target, _ in errors]) - pose_auc_at_10(
+            [baseline for _, baseline in errors]
+        )
+        generator = random.Random(0)
+        samples = []
+        for _ in range(250):
+            sample = [errors[generator.randrange(len(errors))] for _ in errors]
+            samples.append(
+                pose_auc_at_10([target for target, _ in sample])
+                - pose_auc_at_10([baseline for _, baseline in sample])
+            )
+        return point_estimate, statistics.stdev(samples), len(errors)
+
+    return None, None, 0
+
+
 def pareto(rows: list[dict]) -> list[dict]:
     """Keep points not dominated by higher success and lower iteration cost."""
     result = []
@@ -153,6 +197,51 @@ def summarize(records: list[dict], fields: tuple[str, ...]) -> list[dict]:
     return summaries
 
 
+def add_paired_deltas(summaries: list[dict], records: list[dict]) -> None:
+    """Annotate every group with its matched quality difference from fast."""
+    fast = {
+        (
+            trial["suite"],
+            trial["estimator"],
+            trial["scoring_mode"],
+            trial["sampler"],
+            trial["scene"],
+            trial["seed"],
+        ): trial
+        for trial in records
+        if trial["profile"] == "fast"
+    }
+    for summary in summaries:
+        trials = [
+            trial
+            for trial in records
+            if all(
+                trial[field] == summary[field]
+                for field in ("suite", "estimator", "scoring_mode", "sampler", "profile")
+            )
+            and ("scene" not in summary or trial["scene"] == summary["scene"])
+        ]
+        pairs = [
+            (trial, fast[key])
+            for trial in trials
+            if (
+                key := (
+                    trial["suite"],
+                    trial["estimator"],
+                    trial["scoring_mode"],
+                    trial["sampler"],
+                    trial["scene"],
+                    trial["seed"],
+                )
+            )
+            in fast
+        ]
+        delta, delta_se, samples = paired_quality_delta(summary["suite"], pairs)
+        summary["paired_auc_delta_vs_fast"] = delta
+        summary["paired_auc_delta_vs_fast_se"] = delta_se
+        summary["paired_auc_samples"] = samples
+
+
 def main(raw_path: str, output_path: str) -> None:
     records = [json.loads(line) for line in Path(raw_path).read_text().splitlines() if line]
     # The original benchmark runner always used PROSAC but did not serialize it.
@@ -165,6 +254,8 @@ def main(raw_path: str, output_path: str) -> None:
     dataset_summaries = summarize(
         records, ("suite", "estimator", "scoring_mode", "sampler", "profile")
     )
+    add_paired_deltas(summaries, records)
+    add_paired_deltas(dataset_summaries, records)
 
     frontiers = {}
     for suite in sorted({row["suite"] for row in summaries}):
