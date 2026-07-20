@@ -35,7 +35,7 @@ runs:
       run: |
         command -v zstd
         uv run --no-project --with numpy --with opencv-python-headless \
-          python -m unittest python/test_evaluate_phototourism.py
+          python -m unittest python/test_evaluate_phototourism.py python/test_opencv_reference.py
         uv run --no-project python -m unittest python/test_aggregate.py
         uv run --no-project --with-editable ./inlier-data --with h5py \
           python/prepare_phototourism.py \
@@ -74,6 +74,19 @@ runs:
           --homography-input results/homography-input.json \
           --output results/homography.jsonl
         cat results/homography.jsonl >> results/raw.jsonl
+        reference_args="--seeds ${{ inputs.seeds }}"
+        if [ "${{ inputs.smoke }}" = "true" ]; then reference_args="--smoke --seeds 1"; fi
+        uv run --no-project --with numpy --with opencv-python-headless \
+          python/run_opencv_reference.py \
+          --phototourism-input results/phototourism-input.json \
+          --homography-input results/homography-input.json \
+          $reference_args \
+          --output results/opencv-reference.jsonl
+        uv run --no-project --with numpy --with opencv-python-headless \
+          python/evaluate_phototourism.py \
+          --input results/phototourism-input.json \
+          --results results/opencv-reference.jsonl
+        cat results/opencv-reference.jsonl >> results/raw.jsonl
         uv run --no-project --with-editable ./inlier-data --with numpy \
           python/prepare_rigid.py \
           --cache-dir "$RUNNER_TEMP/inlier-data" \

@@ -64,7 +64,21 @@ time. The success-rate gate remains in the diagnostic table.
 
 The dashboard uses Plotly directly in the published HTML, rather than static
 Matplotlib images. Its primary plots expose trial-standard-error bars and
-hover details without adding a Python plotting dependency.
+hover details without adding a Python plotting dependency. The diagnostics
+table also reports a paired quality delta against the fast budget using the
+same fixture pair and RNG seed.
+
+## OpenCV reference
+
+Full and smoke benchmark runs also execute OpenCV `USAC_MAGSAC` on the exact
+same prepared inputs. The reference covers PhotoTourism fundamental-matrix and
+tutorial homography fitting, uses the same confidence/iteration profiles and
+RNG seeds, and measures only the OpenCV robust-estimation call. Its pose and
+transfer quality are evaluated by the same post-processing code as `inlier`.
+
+This is an independent implementation baseline, not a claim of like-for-like
+SuperRANSAC paper reproduction. The remaining multi-dataset, multi-feature
+evaluation work is tracked below.
 
 GitHub Pages publishes only scheduled or manually dispatched full runs. Push
 and pull-request smoke runs remain CI artifacts, so a single difficult pair

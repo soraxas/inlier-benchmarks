@@ -1,0 +1,71 @@
+"""Tests for the independent OpenCV USAC/MAGSAC reference adapter."""
+
+from __future__ import annotations
+
+import unittest
+
+import numpy as np
+
+from python.run_opencv_reference import run_fundamental, run_homography
+
+
+def fundamental_pair() -> dict:
+    points_3d = np.array(
+        [
+            [-0.5, -0.3, 3.0],
+            [0.2, -0.4, 4.0],
+            [0.7, 0.1, 5.0],
+            [-0.3, 0.5, 3.5],
+            [0.4, 0.6, 4.5],
+            [-0.6, 0.2, 5.5],
+            [0.1, 0.4, 3.2],
+            [0.6, -0.1, 4.2],
+        ],
+        dtype=np.float64,
+    )
+    translation = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+    points1 = points_3d[:, :2] / points_3d[:, 2:]
+    shifted = points_3d + translation
+    points2 = shifted[:, :2] / shifted[:, 2:]
+    return {
+        "scene": "synthetic",
+        "pair": "pair",
+        "points1": points1.tolist(),
+        "points2": points2.tolist(),
+        "fundamental": [[0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]],
+    }
+
+
+def homography_pair() -> dict:
+    points1 = np.array(
+        [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [2.0, 1.0], [1.0, 2.0]],
+        dtype=np.float64,
+    )
+    homography = np.array([[1.0, 0.0, 3.0], [0.0, 1.0, -2.0], [0.0, 0.0, 1.0]])
+    points2 = points1 + np.array([3.0, -2.0])
+    return {
+        "dataset": "synthetic",
+        "pair": "pair",
+        "points1": points1.tolist(),
+        "points2": points2.tolist(),
+        "homography": homography.tolist(),
+    }
+
+
+class OpenCvReferenceTests(unittest.TestCase):
+    def test_fundamental_reference_emits_pose_payload(self) -> None:
+        trial = run_fundamental(fundamental_pair(), 1e-4, "balanced", 7)
+        self.assertTrue(trial["success"])
+        self.assertEqual(trial["estimator"], "fundamental")
+        self.assertGreaterEqual(len(trial["inlier_indices"]), 5)
+        self.assertEqual(np.asarray(trial["epipolar_matrix"]).shape, (3, 3))
+
+    def test_homography_reference_uses_the_shared_quality_metric(self) -> None:
+        trial = run_homography(homography_pair(), 1e-4, "balanced", 7)
+        self.assertTrue(trial["success"])
+        self.assertGreater(trial["homography_auc_3"], 0.99)
+        self.assertEqual(trial["scoring_mode"], "opencv_usac_magsac")
+
+
+if __name__ == "__main__":
+    unittest.main()

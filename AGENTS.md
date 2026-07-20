@@ -44,7 +44,7 @@ The smoke path selects one pair with 512 confidence-stratified correspondences a
 robust scoring mode once. It is an integration guard, not a statistical full
 benchmark. Scheduled and manually-dispatched full runs select eight pairs,
 balanced across both scenes, and sweep fast, balanced, and thorough budgets.
-Manual full runs use three repetitions for dashboard refreshes; the weekly
+Manual full runs use ten repetitions for dashboard refreshes; the weekly
 scheduled run uses 30 repetitions for the long statistical baseline.
 
 For PhotoTourism fundamental-matrix trials, retain camera intrinsics, relative
@@ -53,6 +53,12 @@ timed estimator output with `python/evaluate_phototourism.py`, which mirrors
 SuperRANSAC's `F -> E -> recoverPose` evaluation and reports pose `AUC@10°`.
 Use that continuous metric for the primary real-data speed/accuracy plot;
 success rate remains a CI gate and diagnostic field.
+
+`python/run_opencv_reference.py` is the independent OpenCV USAC_MAGSAC
+baseline for PhotoTourism fundamental matrices and tutorial homographies. It
+must consume the prepared JSON inputs, use the same profiles/seeds/thresholds,
+and emit the standard JSONL schema so the existing evaluators and aggregation
+remain the single source of truth.
 
 ## CI Checkout Layout
 
