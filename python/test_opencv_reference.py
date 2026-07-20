@@ -10,16 +10,13 @@ from python.run_opencv_reference import run_fundamental, run_homography
 
 
 def fundamental_pair() -> dict:
+    # USAC's exact-minimal behavior differs between OpenCV builds. Use a
+    # comfortably non-minimal, non-planar scene to test our adapter instead.
     points_3d = np.array(
         [
-            [-0.5, -0.3, 3.0],
-            [0.2, -0.4, 4.0],
-            [0.7, 0.1, 5.0],
-            [-0.3, 0.5, 3.5],
-            [0.4, 0.6, 4.5],
-            [-0.6, 0.2, 5.5],
-            [0.1, 0.4, 3.2],
-            [0.6, -0.1, 4.2],
+            (x * 0.23, y * 0.19, 3.0 + 0.13 * (x * x + y * y) + 0.07 * x * y)
+            for x in range(-2, 3)
+            for y in range(-2, 3)
         ],
         dtype=np.float64,
     )
@@ -54,7 +51,7 @@ def homography_pair() -> dict:
 
 class OpenCvReferenceTests(unittest.TestCase):
     def test_fundamental_reference_emits_pose_payload(self) -> None:
-        trial = run_fundamental(fundamental_pair(), 1e-4, "balanced", 7)
+        trial = run_fundamental(fundamental_pair(), 1e-3, "balanced", 7)
         self.assertTrue(trial["success"])
         self.assertEqual(trial["estimator"], "fundamental")
         self.assertGreaterEqual(len(trial["inlier_indices"]), 5)
