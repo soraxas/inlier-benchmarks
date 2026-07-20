@@ -55,7 +55,7 @@ Use that continuous metric for the primary real-data speed/accuracy plot;
 success rate remains a CI gate and diagnostic field.
 
 `python/run_opencv_reference.py` is the independent OpenCV USAC_MAGSAC
-baseline for PhotoTourism fundamental matrices and tutorial homographies. It
+baseline for PhotoTourism fundamental and essential matrices plus tutorial homographies. It
 must consume the prepared JSON inputs, use the same profiles/seeds/thresholds,
 and emit the standard JSONL schema so the existing evaluators and aggregation
 remain the single source of truth.

@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from python.run_opencv_reference import run_fundamental, run_homography
+from python.run_opencv_reference import run_essential, run_fundamental, run_homography
 
 
 def fundamental_pair() -> dict:
@@ -24,12 +24,16 @@ def fundamental_pair() -> dict:
     points1 = points_3d[:, :2] / points_3d[:, 2:]
     shifted = points_3d + translation
     points2 = shifted[:, :2] / shifted[:, 2:]
+    essential = [[0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]]
     return {
         "scene": "synthetic",
         "pair": "pair",
         "points1": points1.tolist(),
         "points2": points2.tolist(),
-        "fundamental": [[0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]],
+        "fundamental": essential,
+        "essential": essential,
+        "intrinsics1": np.eye(3).tolist(),
+        "intrinsics2": np.eye(3).tolist(),
     }
 
 
@@ -62,6 +66,12 @@ class OpenCvReferenceTests(unittest.TestCase):
         self.assertTrue(trial["success"])
         self.assertGreater(trial["homography_auc_3"], 0.99)
         self.assertEqual(trial["scoring_mode"], "opencv_usac_magsac")
+
+    def test_essential_reference_emits_pose_payload(self) -> None:
+        trial = run_essential(fundamental_pair(), 1e-3, "balanced", 7)
+        self.assertTrue(trial["success"])
+        self.assertEqual(trial["estimator"], "essential")
+        self.assertGreaterEqual(len(trial["inlier_indices"]), 5)
 
 
 if __name__ == "__main__":

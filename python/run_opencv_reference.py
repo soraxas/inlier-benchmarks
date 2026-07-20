@@ -143,6 +143,64 @@ def run_fundamental(pair: dict, threshold: float, profile: str, seed: int) -> di
     return trial
 
 
+def run_essential(pair: dict, threshold: float, profile: str, seed: int) -> dict:
+    points1 = np.asarray(pair["points1"], dtype=np.float64)
+    points2 = np.asarray(pair["points2"], dtype=np.float64)
+    intrinsics1 = np.asarray(pair["intrinsics1"], dtype=np.float64)
+    intrinsics2 = np.asarray(pair["intrinsics2"], dtype=np.float64)
+    max_iterations, confidence = PROFILES[profile]
+    focal_scale = np.mean(
+        [intrinsics1[0, 0], intrinsics1[1, 1], intrinsics2[0, 0], intrinsics2[1, 1]]
+    )
+    normalized_threshold = threshold / focal_scale
+    cv2.setRNGSeed(seed & 0x7FFF_FFFF)
+    start = time.perf_counter_ns()
+    normalized1 = cv2.undistortPoints(points1.reshape(-1, 1, 2), intrinsics1, None).reshape(-1, 2)
+    normalized2 = cv2.undistortPoints(points2.reshape(-1, 1, 2), intrinsics2, None).reshape(-1, 2)
+    matrix, mask = cv2.findEssentialMat(
+        normalized1,
+        normalized2,
+        np.eye(3),
+        cv2.USAC_MAGSAC,
+        confidence,
+        normalized_threshold,
+        max_iterations,
+    )
+    runtime_ms = (time.perf_counter_ns() - start) / 1_000_000.0
+    trial = base_trial(
+        suite="phototourism-val",
+        estimator="essential",
+        profile=profile,
+        scene=f"{pair['scene']}/{pair['pair']}",
+        seed=seed,
+        runtime_ms=runtime_ms,
+    )
+    if matrix is None or mask is None or np.asarray(matrix).shape != (3, 3):
+        return trial
+    matrix = np.asarray(matrix, dtype=np.float64)
+    selected = np.flatnonzero(np.asarray(mask).reshape(-1) != 0)
+    if len(selected) < 5 or not np.isfinite(matrix).all():
+        return trial
+    truth = sampson_errors(np.asarray(pair["essential"], dtype=np.float64), normalized1, normalized2) <= normalized_threshold
+    residuals = sampson_errors(matrix, normalized1, normalized2)
+    precision, recall, classification_error = classification(selected, truth)
+    trial.update(
+        {
+            "inlier_precision": precision,
+            "inlier_recall": recall,
+            "normalized_model_error": float(np.median(residuals[truth]) / normalized_threshold)
+            if np.any(truth)
+            else 1_000_000_000.0,
+            "inlier_classification_error": classification_error,
+            "epipolar_matrix": matrix.tolist(),
+            "inlier_indices": selected.tolist(),
+            "success": True,
+            "failure_reason": None,
+        }
+    )
+    return trial
+
+
 def run_homography(pair: dict, threshold: float, profile: str, seed: int) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
@@ -211,6 +269,10 @@ def main() -> None:
             seed = 0x5EED_CAFE_D00D_BAAD ^ index
             trials.extend(
                 run_fundamental(pair, photo["threshold"], profile, seed)
+                for pair in photo["pairs"]
+            )
+            trials.extend(
+                run_essential(pair, photo["threshold"], profile, seed)
                 for pair in photo["pairs"]
             )
             trials.extend(
