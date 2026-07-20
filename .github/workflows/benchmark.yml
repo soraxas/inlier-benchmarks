@@ -67,6 +67,11 @@ jobs:
           curl --fail --silent --show-error -o baseline/summary.json https://cs.tinyiu.com/inlier-benchmarks/latest.json || true
           uv run --no-project python/regress.py results/summary.json baseline/summary.json
           cat site/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Gate full paired quality
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.scope == 'full')
+        run: |
+          curl --fail --silent --show-error -o baseline/summary.json https://cs.tinyiu.com/inlier-benchmarks/latest.json || true
+          uv run --no-project python/regress.py results/summary.json baseline/summary.json
       - uses: actions/upload-artifact@v4
         with:
           name: benchmark-report
