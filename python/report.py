@@ -11,7 +11,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PROFILE_ORDER = {"fast": 0, "balanced": 1, "thorough": 2}
-PROFILE_MARKERS = {"fast": "triangle-up", "balanced": "circle", "thorough": "square"}
+PROFILE_MARKER_SIZES = {"fast": 8, "balanced": 11, "thorough": 14}
+MODE_COLORS = {
+    "ransac": "#dc2626",
+    "msac": "#2563eb",
+    "magsac": "#16a34a",
+    "magsac_pp": "#7c3aed",
+    "opencv_ransac": "#dc2626",
+    "opencv_usac_magsac": "#b7791f",
+}
+SAMPLER_MARKERS = {
+    "uniform": "circle",
+    "prosac": "triangle-up",
+    "opencv": "diamond",
+    "opencv_usac": "diamond",
+}
 
 
 def suite_label(suite: str) -> str:
@@ -28,12 +42,13 @@ def mode_label(mode: str) -> str:
         "msac": "MSAC",
         "magsac": "MAGSAC",
         "magsac_pp": "MAGSAC++",
+        "opencv_ransac": "OpenCV RANSAC",
         "opencv_usac_magsac": "OpenCV USAC_MAGSAC",
     }.get(mode, mode)
 
 
 def sampler_label(sampler: str) -> str:
-    return {"uniform": "Uniform", "prosac": "PROSAC"}.get(sampler, sampler)
+    return {"uniform": "Uniform", "prosac": "PROSAC", "opencv": "OpenCV", "opencv_usac": "OpenCV"}.get(sampler, sampler)
 
 
 def percentage(value: float | None) -> str:
@@ -108,17 +123,18 @@ def quality_metric(suite: str) -> tuple[str, str, str]:
 def make_plot(rows: list[dict], title: str, suite: str) -> dict:
     """Build a Plotly figure following the SuperRANSAC speed/AUC convention."""
     metric, metric_se, metric_label = quality_metric(suite)
-    by_mode: dict[str, list[dict]] = defaultdict(list)
+    by_mode: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for row in rows:
-        by_mode[f"{mode_label(row['scoring_mode'])} / {sampler_label(row['sampler'])}"].append(row)
+        by_mode[(row["scoring_mode"], row["sampler"])].append(row)
     traces = []
-    for label, points in sorted(by_mode.items()):
+    for (mode, sampler), points in sorted(by_mode.items()):
         points.sort(key=lambda row: PROFILE_ORDER.get(row["profile"], 99))
+        external = mode.startswith("opencv_")
         traces.append(
             {
                 "type": "scatter",
                 "mode": "lines+markers",
-                "name": label,
+                "name": f"{mode_label(mode)} / {sampler_label(sampler)}",
                 "x": [point["mean_runtime_ms"] / 1_000.0 for point in points],
                 "y": [point[metric] for point in points],
                 "error_x": {
@@ -132,10 +148,12 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                     "visible": True,
                 },
                 "marker": {
-                    "size": 10,
+                    "color": MODE_COLORS.get(mode, "#374151"),
+                    "size": [PROFILE_MARKER_SIZES.get(point["profile"], 10) for point in points],
                     "line": {"color": "#fff", "width": 1},
-                    "symbol": [PROFILE_MARKERS.get(point["profile"], "circle") for point in points],
+                    "symbol": SAMPLER_MARKERS.get(sampler, "diamond"),
                 },
+                "line": {"color": MODE_COLORS.get(mode, "#374151"), "dash": "dash" if external else "solid"},
                 "customdata": [
                     [
                         point["profile"],
@@ -168,17 +186,6 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
             "paper_bgcolor": "#fff",
             "plot_bgcolor": "#fff",
             "font": {"color": "#222"},
-            "colorway": [
-                "#2563eb",
-                "#f97316",
-                "#16a34a",
-                "#dc2626",
-                "#7c3aed",
-                "#0891b2",
-                "#ca8a04",
-                "#be123c",
-                "#4d7c0f",
-            ],
             "hovermode": "closest",
             "xaxis": {
                 "title": "Average time [s]",
@@ -198,7 +205,7 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                 "linecolor": "#9ca3af",
                 "gridcolor": "#e5e7eb",
             },
-            "legend": {"title": {"text": "Robust method"}, "orientation": "h", "y": -0.24},
+            "legend": {"title": {"text": "Scorer / sampler"}, "orientation": "h", "y": -0.24},
             "margin": {"l": 85, "r": 30, "t": 65, "b": 110},
         },
     }
@@ -264,10 +271,10 @@ def main(summary_path: str, output_dir: str) -> None:
         "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and left is better.</p></header>"
         "<nav class=tabs role=tablist aria-label='Benchmark views'><button role=tab aria-selected=true aria-controls=quality-panel data-tab=quality-panel>Current results</button><button role=tab aria-selected=false aria-controls=history-panel data-tab=history-panel>Historical regression</button></nav>"
         "<main id=quality-panel class=panel><div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism follows the SuperRANSAC convention: pose AUC@10 degrees on the y-axis and average estimation time in seconds on a logarithmic x-axis. Homography validation uses transfer AUC@3 pixels against its ground-truth homography. Standard-error bars show trial variability.</p>"
-        "<p>Triangle, circle, and square markers denote fast, balanced, and thorough iteration budgets. The paired AUC delta column compares each point with fast using the identical scene and RNG seed; it separates a real budget effect from unmatched trial variance. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
+        "<p>Color identifies the scorer. Circles are uniform sampling, triangles are PROSAC, and diamonds are OpenCV. Marker size increases from fast through balanced to thorough. Dashed lines identify external implementations. The paired AUC delta column compares each point with fast using the identical scene and RNG seed; it separates a real budget effect from unmatched trial variance. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p>"
-        "<p><b>OpenCV USAC_MAGSAC</b> is an independent reference run on the identical input pairs, thresholds, profiles, and seeds. Its timed region contains only OpenCV's robust-estimation call.</p></div></div>"
+        "<p><b>OpenCV RANSAC and USAC_MAGSAC</b> are independent reference runs on the identical input pairs, thresholds, profiles, and seeds. Their timed region contains only OpenCV's robust-estimation call.</p></div></div>"
         f"{''.join(plot_sections)}<h2>PhotoTourism Pair Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Sampler</th><th>Profile</th><th>Scene</th>"
         "<th>Quality AUC</th><th>Paired delta vs fast</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th><th>Mean sampler calls</th><th>Mean inlier ratio</th>"

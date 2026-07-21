@@ -72,7 +72,7 @@ same fixture pair and RNG seed.
 
 ## OpenCV reference
 
-Full and smoke benchmark runs also execute OpenCV `USAC_MAGSAC` on the exact
+Full and smoke benchmark runs also execute OpenCV `RANSAC` and `USAC_MAGSAC` on the exact
 same prepared inputs. The reference covers PhotoTourism fundamental and
 essential fitting plus tutorial homographies, uses the same confidence/iteration profiles and
 RNG seeds, and measures only the OpenCV robust-estimation call. Its pose and

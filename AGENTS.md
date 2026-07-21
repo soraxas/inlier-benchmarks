@@ -57,7 +57,7 @@ SuperRANSAC's `F -> E -> recoverPose` evaluation and reports pose `AUC@10°`.
 Use that continuous metric for the primary real-data speed/accuracy plot;
 success rate remains a CI gate and diagnostic field.
 
-`python/run_opencv_reference.py` is the independent OpenCV USAC_MAGSAC
+`python/run_opencv_reference.py` is the independent OpenCV RANSAC and USAC_MAGSAC
 baseline for PhotoTourism fundamental and essential matrices plus tutorial homographies. It
 must consume the prepared JSON inputs, use the same profiles/seeds/thresholds,
 and emit the standard JSONL schema so the existing evaluators and aggregation

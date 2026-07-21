@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run OpenCV USAC_MAGSAC on the same immutable benchmark fixtures as inlier."""
+"""Run OpenCV robust estimators on the same immutable benchmark fixtures as inlier."""
 
 from __future__ import annotations
 
@@ -16,6 +16,11 @@ PROFILES = {
     "fast": (250, 0.95),
     "balanced": (1_000, 0.99),
     "thorough": (5_000, 0.999),
+}
+
+OPENCV_METHODS = {
+    "opencv_ransac": cv2.RANSAC,
+    "opencv_usac_magsac": cv2.USAC_MAGSAC,
 }
 
 
@@ -73,14 +78,21 @@ def classification(predicted: np.ndarray, truth: np.ndarray) -> tuple[float, flo
 
 
 def base_trial(
-    *, suite: str, estimator: str, profile: str, scene: str, seed: int, runtime_ms: float
+    *,
+    suite: str,
+    estimator: str,
+    scoring_mode: str,
+    profile: str,
+    scene: str,
+    seed: int,
+    runtime_ms: float,
 ) -> dict:
     return {
         "suite": suite,
         "suite_version": 1,
         "estimator": estimator,
-        "scoring_mode": "opencv_usac_magsac",
-        "sampler": "opencv_usac",
+        "scoring_mode": scoring_mode,
+        "sampler": "opencv",
         "profile": profile,
         "scene": scene,
         "seed": seed,
@@ -95,23 +107,27 @@ def base_trial(
         "homography_auc_3": None,
         "diagnostics": None,
         "success": False,
-        "failure_reason": "OpenCV USAC_MAGSAC did not produce a model",
+        "failure_reason": f"OpenCV {scoring_mode} did not produce a model",
     }
 
 
-def run_fundamental(pair: dict, threshold: float, profile: str, seed: int) -> dict:
+def run_fundamental(
+    pair: dict, threshold: float, profile: str, seed: int, scoring_mode: str = "opencv_usac_magsac"
+) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
     max_iterations, confidence = PROFILES[profile]
+    method = OPENCV_METHODS[scoring_mode]
     cv2.setRNGSeed(seed & 0x7FFF_FFFF)
     start = time.perf_counter_ns()
     matrix, mask = cv2.findFundamentalMat(
-        points1, points2, cv2.USAC_MAGSAC, threshold, confidence, max_iterations
+        points1, points2, method, threshold, confidence, max_iterations
     )
     runtime_ms = (time.perf_counter_ns() - start) / 1_000_000.0
     trial = base_trial(
         suite="phototourism-val",
         estimator="fundamental",
+        scoring_mode=scoring_mode,
         profile=profile,
         scene=f"{pair['scene']}/{pair['pair']}",
         seed=seed,
@@ -132,7 +148,7 @@ def run_fundamental(pair: dict, threshold: float, profile: str, seed: int) -> di
             "inlier_recall": recall,
             "normalized_model_error": float(np.median(residuals[truth]) / threshold)
             if np.any(truth)
-            else float("inf"),
+            else 1_000_000_000.0,
             "inlier_classification_error": classification_error,
             "epipolar_matrix": matrix.tolist(),
             "inlier_indices": selected.tolist(),
@@ -143,7 +159,9 @@ def run_fundamental(pair: dict, threshold: float, profile: str, seed: int) -> di
     return trial
 
 
-def run_essential(pair: dict, threshold: float, profile: str, seed: int) -> dict:
+def run_essential(
+    pair: dict, threshold: float, profile: str, seed: int, scoring_mode: str = "opencv_usac_magsac"
+) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
     intrinsics1 = np.asarray(pair["intrinsics1"], dtype=np.float64)
@@ -153,6 +171,7 @@ def run_essential(pair: dict, threshold: float, profile: str, seed: int) -> dict
         [intrinsics1[0, 0], intrinsics1[1, 1], intrinsics2[0, 0], intrinsics2[1, 1]]
     )
     normalized_threshold = threshold / focal_scale
+    method = OPENCV_METHODS[scoring_mode]
     cv2.setRNGSeed(seed & 0x7FFF_FFFF)
     start = time.perf_counter_ns()
     normalized1 = cv2.undistortPoints(points1.reshape(-1, 1, 2), intrinsics1, None).reshape(-1, 2)
@@ -161,7 +180,7 @@ def run_essential(pair: dict, threshold: float, profile: str, seed: int) -> dict
         normalized1,
         normalized2,
         np.eye(3),
-        cv2.USAC_MAGSAC,
+        method,
         confidence,
         normalized_threshold,
         max_iterations,
@@ -170,6 +189,7 @@ def run_essential(pair: dict, threshold: float, profile: str, seed: int) -> dict
     trial = base_trial(
         suite="phototourism-val",
         estimator="essential",
+        scoring_mode=scoring_mode,
         profile=profile,
         scene=f"{pair['scene']}/{pair['pair']}",
         seed=seed,
@@ -201,19 +221,23 @@ def run_essential(pair: dict, threshold: float, profile: str, seed: int) -> dict
     return trial
 
 
-def run_homography(pair: dict, threshold: float, profile: str, seed: int) -> dict:
+def run_homography(
+    pair: dict, threshold: float, profile: str, seed: int, scoring_mode: str = "opencv_usac_magsac"
+) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
     max_iterations, confidence = PROFILES[profile]
+    method = OPENCV_METHODS[scoring_mode]
     cv2.setRNGSeed(seed & 0x7FFF_FFFF)
     start = time.perf_counter_ns()
     matrix, mask = cv2.findHomography(
-        points1, points2, cv2.USAC_MAGSAC, threshold, None, max_iterations, confidence
+        points1, points2, method, threshold, None, max_iterations, confidence
     )
     runtime_ms = (time.perf_counter_ns() - start) / 1_000_000.0
     trial = base_trial(
         suite="homography-ransac-val",
         estimator="homography",
+        scoring_mode=scoring_mode,
         profile=profile,
         scene=f"{pair['dataset']}/{pair['pair']}",
         seed=seed,
@@ -238,7 +262,7 @@ def run_homography(pair: dict, threshold: float, profile: str, seed: int) -> dic
             "inlier_recall": recall,
             "normalized_model_error": float(np.median(residuals[truth]) / threshold)
             if np.any(truth)
-            else float("inf"),
+            else 1_000_000_000.0,
             "inlier_classification_error": classification_error,
             "homography_auc_3": quality,
             "success": True,
@@ -267,21 +291,22 @@ def main() -> None:
     for profile in profiles:
         for index in range(seeds):
             seed = 0x5EED_CAFE_D00D_BAAD ^ index
-            trials.extend(
-                run_fundamental(pair, photo["threshold"], profile, seed)
-                for pair in photo["pairs"]
-            )
-            trials.extend(
-                run_essential(pair, photo["threshold"], profile, seed)
-                for pair in photo["pairs"]
-            )
-            trials.extend(
-                run_homography(pair, homography["threshold"], profile, seed)
-                for pair in homography["pairs"]
-            )
+            for scoring_mode in OPENCV_METHODS:
+                trials.extend(
+                    run_fundamental(pair, photo["threshold"], profile, seed, scoring_mode)
+                    for pair in photo["pairs"]
+                )
+                trials.extend(
+                    run_essential(pair, photo["threshold"], profile, seed, scoring_mode)
+                    for pair in photo["pairs"]
+                )
+                trials.extend(
+                    run_homography(pair, homography["threshold"], profile, seed, scoring_mode)
+                    for pair in homography["pairs"]
+                )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("".join(json.dumps(trial, allow_nan=False) + "\n" for trial in trials))
-    print(f"ran {len(trials)} OpenCV USAC_MAGSAC reference trial(s): {args.output}")
+    print(f"ran {len(trials)} OpenCV reference trial(s): {args.output}")
 
 
 if __name__ == "__main__":

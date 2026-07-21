@@ -61,11 +61,16 @@ class OpenCvReferenceTests(unittest.TestCase):
         self.assertGreaterEqual(len(trial["inlier_indices"]), 5)
         self.assertEqual(np.asarray(trial["epipolar_matrix"]).shape, (3, 3))
 
+    def test_opencv_ransac_reference_emits_pose_payload(self) -> None:
+        trial = run_fundamental(fundamental_pair(), 1e-3, "balanced", 7, "opencv_ransac")
+        self.assertTrue(trial["success"])
+        self.assertEqual(trial["scoring_mode"], "opencv_ransac")
+
     def test_homography_reference_uses_the_shared_quality_metric(self) -> None:
-        trial = run_homography(homography_pair(), 1e-4, "balanced", 7)
+        trial = run_homography(homography_pair(), 1e-4, "balanced", 7, "opencv_ransac")
         self.assertTrue(trial["success"])
         self.assertGreater(trial["homography_auc_3"], 0.99)
-        self.assertEqual(trial["scoring_mode"], "opencv_usac_magsac")
+        self.assertEqual(trial["scoring_mode"], "opencv_ransac")
 
     def test_essential_reference_emits_pose_payload(self) -> None:
         trial = run_essential(fundamental_pair(), 1e-3, "balanced", 7)
