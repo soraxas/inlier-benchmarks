@@ -43,7 +43,10 @@ checkout; Pooch downloads the archive once and verifies it before extraction.
 The smoke path selects one pair with 512 confidence-stratified correspondences and runs every
 robust scoring mode once. It is an integration guard, not a statistical full
 benchmark. Scheduled and manually-dispatched full runs select eight pairs,
-balanced across both scenes, and sweep fast, balanced, and thorough budgets.
+balanced across both scenes, and sweep fast, balanced, and thorough maximum
+hypothesis budgets. `inlier` and OpenCV both use confidence-based adaptive
+termination; never set the benchmark's minimum equal to the maximum, because
+that forces only one implementation to exhaust the full budget.
 Manual full runs use ten repetitions for dashboard refreshes; the weekly
 scheduled run uses 30 repetitions for the long statistical baseline.
 

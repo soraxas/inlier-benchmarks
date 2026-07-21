@@ -200,7 +200,10 @@ fn settings(
         _ => return Err(format!("unknown sampler {sampler}")),
     };
     Ok(MetasacSettings {
-        min_iterations: iterations,
+        // Profiles are maximum hypothesis budgets, matching OpenCV's
+        // `maxIters` contract. A fixed minimum equal to the maximum forces
+        // inlier to exhaust every hypothesis while OpenCV stops at confidence.
+        min_iterations: 1,
         max_iterations: iterations,
         // Benchmarks charge each failed minimal solve to the configured
         // hypothesis budget. Retrying a pathological sample internally can
@@ -1352,5 +1355,15 @@ mod tests {
             SamplerType::Prosac
         );
         assert!(settings("fast", "ransac", "unknown", 1).is_err());
+    }
+
+    #[test]
+    fn benchmark_profiles_use_adaptive_maximum_iteration_budgets() {
+        let fast = settings("fast", "ransac", "uniform", 1).unwrap();
+        let thorough = settings("thorough", "ransac", "uniform", 1).unwrap();
+        assert_eq!(fast.min_iterations, 1);
+        assert_eq!(fast.max_iterations, 250);
+        assert_eq!(thorough.min_iterations, 1);
+        assert_eq!(thorough.max_iterations, 5_000);
     }
 }
