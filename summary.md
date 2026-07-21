@@ -290,6 +290,54 @@
 | Homography validation / homography | MSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.128 | 7 |
 | Homography validation / homography | MSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.212 | 12 |
 | Homography validation / homography | MSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.294 | 10 |
+| Homography validation / homography | OpenCV RANSAC | EVD/dum | 100.0% | 27.498 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/face | 100.0% | 0.335 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/fox | 100.0% | 0.896 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/graf | 100.0% | 0.328 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/mag | 100.0% | 0.668 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/pkk | 100.0% | 0.957 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/there | 100.0% | 0.507 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.088 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.134 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.235 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.160 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.127 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.068 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.134 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.221 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.288 | 1000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/dum | 100.0% | 2.482 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/face | 100.0% | 0.417 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/fox | 100.0% | 1.055 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/graf | 100.0% | 0.328 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/mag | 100.0% | 0.705 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/pkk | 100.0% | 1.406 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/there | 100.0% | 0.507 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.088 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.134 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.235 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.160 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.127 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.068 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.134 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.221 | 250 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.288 | 250 |
+| Homography validation / homography | OpenCV RANSAC | EVD/dum | 100.0% | 1.760 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/face | 100.0% | 0.335 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/fox | 100.0% | 1.173 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/graf | 100.0% | 0.328 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/mag | 100.0% | 0.644 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/pkk | 100.0% | 0.851 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | EVD/there | 100.0% | 0.507 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_bricks_1_2 | 100.0% | 0.087 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_bricks_1_3 | 100.0% | 0.134 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_calder_1_3 | 100.0% | 0.235 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_churchill_1_5 | 100.0% | 0.160 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_strand_1_2 | 100.0% | 0.127 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_sunseason_1_2 | 100.0% | 0.068 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_underground_1_2 | 100.0% | 0.134 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_wall_1_4 | 100.0% | 0.221 | 5000 |
+| Homography validation / homography | OpenCV RANSAC | HPatchesSeq/v_wormhole_1_4 | 100.0% | 0.288 | 5000 |
 | Homography validation / homography | OpenCV USAC_MAGSAC | EVD/dum | 100.0% | 39.734 | 1000 |
 | Homography validation / homography | OpenCV USAC_MAGSAC | EVD/face | 100.0% | 0.321 | 1000 |
 | Homography validation / homography | OpenCV USAC_MAGSAC | EVD/fox | 100.0% | 0.572 | 1000 |
@@ -578,6 +626,30 @@
 | PhotoTourism validation / essential | MSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 80.0% | 0.265 | 76 |
 | PhotoTourism validation / essential | MSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.217 | 60 |
 | PhotoTourism validation / essential | MSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.216 | 43 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.382 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.418 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.334 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.378 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.236 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.219 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.302 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.380 | 1000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.382 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.418 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.334 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.378 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.233 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.219 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.302 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.380 | 250 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.382 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.418 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.334 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.378 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.236 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.219 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.302 | 5000 |
+| PhotoTourism validation / essential | OpenCV RANSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.188 | 5000 |
 | PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.367 | 1000 |
 | PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.423 | 1000 |
 | PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.372 | 1000 |
@@ -794,6 +866,30 @@
 | PhotoTourism validation / fundamental | MSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 20.0% | 0.156 | 163 |
 | PhotoTourism validation / fundamental | MSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.216 | 154 |
 | PhotoTourism validation / fundamental | MSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.149 | 78 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.433 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.289 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.270 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.233 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.218 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.192 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.254 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.156 | 1000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.545 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.289 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.270 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.336 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.256 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.192 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.254 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.156 | 250 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.347 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.289 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.270 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.233 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.233 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.192 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.264 | 5000 |
+| PhotoTourism validation / fundamental | OpenCV RANSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.146 | 5000 |
 | PhotoTourism validation / fundamental | OpenCV USAC_MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.261 | 1000 |
 | PhotoTourism validation / fundamental | OpenCV USAC_MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.224 | 1000 |
 | PhotoTourism validation / fundamental | OpenCV USAC_MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.212 | 1000 |
