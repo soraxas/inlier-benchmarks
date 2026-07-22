@@ -20,6 +20,7 @@ PROFILES = {
 
 OPENCV_METHODS = {
     "opencv_ransac": cv2.RANSAC,
+    "opencv_usac_prosac": cv2.USAC_PROSAC,
     "opencv_usac_magsac": cv2.USAC_MAGSAC,
 }
 ESSENTIAL_THRESHOLD_SCALES = (0.25, 0.5, 2.0, 4.0)

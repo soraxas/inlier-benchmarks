@@ -18,6 +18,7 @@ MODE_COLORS = {
     "magsac": "#16a34a",
     "magsac_pp": "#7c3aed",
     "opencv_ransac": "#dc2626",
+    "opencv_usac_prosac": "#0891b2",
     "opencv_usac_magsac": "#b7791f",
 }
 SAMPLER_MARKERS = {
@@ -43,6 +44,7 @@ def mode_label(mode: str) -> str:
         "magsac": "MAGSAC",
         "magsac_pp": "MAGSAC++",
         "opencv_ransac": "OpenCV RANSAC",
+        "opencv_usac_prosac": "OpenCV USAC_PROSAC",
         "opencv_usac_magsac": "OpenCV USAC_MAGSAC",
     }.get(mode, mode)
 

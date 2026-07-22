@@ -66,6 +66,11 @@ class OpenCvReferenceTests(unittest.TestCase):
         self.assertTrue(trial["success"])
         self.assertEqual(trial["scoring_mode"], "opencv_ransac")
 
+    def test_opencv_usac_prosac_reference_emits_pose_payload(self) -> None:
+        trial = run_fundamental(fundamental_pair(), 1e-3, "balanced", 7, "opencv_usac_prosac")
+        self.assertTrue(trial["success"])
+        self.assertEqual(trial["scoring_mode"], "opencv_usac_prosac")
+
     def test_homography_reference_uses_the_shared_quality_metric(self) -> None:
         trial = run_homography(homography_pair(), 1e-4, "balanced", 7, "opencv_ransac")
         self.assertTrue(trial["success"])
