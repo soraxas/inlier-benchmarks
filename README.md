@@ -20,7 +20,9 @@ and scenes; `--smoke` limits it to the balanced profile and adversarial outlier 
 
 The real fundamental-matrix smoke test downloads the immutable HDF5 fixture
 with `inlier_data`/Pooch, verifies it, extracts it locally, and prepares one
-fixed 512-correspondence pair sampled across confidence levels. It does not use source images.
+fixed 512-correspondence pair sampled across confidence levels. Full runs
+stratify selected pairs across each scene's correspondence-count range instead
+of selecting only the largest/easiest match sets. It does not use source images.
 
 ```bash
 just prepare-phototourism

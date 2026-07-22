@@ -57,6 +57,15 @@ def select_pairs(root: Path, count: int, max_correspondences: int) -> list[dict[
         )
         for scene in SCENES
     }
+    # The previous selection repeatedly popped the largest correspondence sets,
+    # making the small canonical sample systematically easier. Take evenly
+    # spaced ranks from each scene instead, then interleave scenes below.
+    per_scene = (count + len(SCENES) - 1) // len(SCENES)
+    for scene, scene_candidates in by_scene.items():
+        if len(scene_candidates) < per_scene:
+            raise RuntimeError(f"Requested {per_scene} pairs from {scene}, found {len(scene_candidates)}")
+        positions = np.linspace(0, len(scene_candidates) - 1, per_scene, dtype=int)
+        by_scene[scene] = [scene_candidates[position] for position in positions]
     selected = []
     while len(selected) < count:
         added = False
