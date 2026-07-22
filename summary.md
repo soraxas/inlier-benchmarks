@@ -674,6 +674,38 @@
 | PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.283 | 5000 |
 | PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.315 | 5000 |
 | PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.244 | 5000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.869 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.687 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.674 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.669 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.507 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.732 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.398 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.775 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.448 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.352 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.387 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.413 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.493 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.501 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.370 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.352 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.195 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.245 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.292 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.122 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.335 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.153 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.416 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.523 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.102 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 100.0% | 0.363 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.150 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | sacre_coeur/99119091_3503925030-29316928_4862042124 | 100.0% | 0.069 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/58625779_4250521833-30422040_8746974941 | 100.0% | 0.169 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/67407966_4358094261-30422040_8746974941 | 100.0% | 0.105 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/87861153_7218695364-02169954_2265503206 | 100.0% | 0.252 | 1000 |
+| PhotoTourism validation / essential | OpenCV USAC_MAGSAC | st_peters_square/96441840_5987269620-70611917_5987268232 | 100.0% | 0.373 | 1000 |
 | PhotoTourism validation / essential | RANSAC | sacre_coeur/39852107_3868092306-29316928_4862042124 | 100.0% | 0.316 | 58 |
 | PhotoTourism validation / essential | RANSAC | sacre_coeur/68663909_1356782012-03903474_1471484089 | 90.0% | 0.337 | 46 |
 | PhotoTourism validation / essential | RANSAC | sacre_coeur/82946251_4121478019-10265353_3838484249 | 100.0% | 0.258 | 28 |
