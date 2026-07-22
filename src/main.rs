@@ -25,6 +25,8 @@ struct Args {
     #[arg(long)]
     homography_input: Option<PathBuf>,
     #[arg(long)]
+    absolute_pose_input: Option<PathBuf>,
+    #[arg(long)]
     rigid_input: Option<PathBuf>,
 }
 
@@ -56,6 +58,7 @@ struct Trial {
     normalized_model_error: f64,
     inlier_classification_error: f64,
     epipolar_matrix: Option<[[f64; 3]; 3]>,
+    absolute_pose: Option<[[f64; 4]; 3]>,
     inlier_indices: Option<Vec<usize>>,
     homography_auc_3: Option<f64>,
     diagnostics: Option<TrialDiagnostics>,
@@ -113,6 +116,24 @@ struct HomographyPair {
     points1: Vec<[f64; 2]>,
     points2: Vec<[f64; 2]>,
     homography: [[f64; 3]; 3],
+}
+
+#[derive(Deserialize)]
+struct AbsolutePoseInput {
+    schema_version: u32,
+    dataset: String,
+    threshold: f64,
+    pairs: Vec<AbsolutePosePair>,
+}
+
+#[derive(Deserialize)]
+struct AbsolutePosePair {
+    scene: String,
+    points3d: Vec<[f64; 3]>,
+    points2d: Vec<[f64; 2]>,
+    match_scores: Vec<f64>,
+    rotation: [[f64; 3]; 3],
+    translation: [f64; 3],
 }
 
 #[derive(Deserialize)]
@@ -650,6 +671,31 @@ fn matrix_to_array(matrix: &Matrix3<f64>) -> [[f64; 3]; 3] {
     ]
 }
 
+fn absolute_pose_to_array(model: &inlier::models::AbsolutePose) -> [[f64; 4]; 3] {
+    let rotation = model.rotation.to_rotation_matrix();
+    let translation = model.translation.vector;
+    [
+        [
+            rotation[(0, 0)],
+            rotation[(0, 1)],
+            rotation[(0, 2)],
+            translation.x,
+        ],
+        [
+            rotation[(1, 0)],
+            rotation[(1, 1)],
+            rotation[(1, 2)],
+            translation.y,
+        ],
+        [
+            rotation[(2, 0)],
+            rotation[(2, 1)],
+            rotation[(2, 2)],
+            translation.z,
+        ],
+    ]
+}
+
 fn homography_transfer_error(homography: &Matrix3<f64>, source: [f64; 2], target: [f64; 2]) -> f64 {
     let projected = homography * Vector3::new(source[0], source[1], 1.0);
     if !projected.z.is_finite() || projected.z.abs() < 1e-12 {
@@ -743,6 +789,87 @@ fn run_homography_fixture(
         epipolar_matrix: None,
         homography_auc_3: Some(auc_at_threshold(&ground_truth_errors, threshold)),
     })
+}
+
+fn run_absolute_pose_fixture(
+    pair: &AbsolutePosePair,
+    threshold: f64,
+    settings: MetasacSettings,
+) -> Result<(Outcome, [[f64; 4]; 3]), String> {
+    if pair.points3d.len() != pair.points2d.len() || pair.points3d.len() < 3 {
+        return Err(
+            "absolute-pose pair must contain matching 3D and 2D arrays with at least three rows"
+                .into(),
+        );
+    }
+    if pair.match_scores.len() != pair.points3d.len()
+        || pair.match_scores.iter().any(|score| !score.is_finite())
+        || pair
+            .match_scores
+            .windows(2)
+            .any(|scores| scores[0] < scores[1])
+    {
+        return Err("absolute-pose confidence scores must be finite and sorted best-first".into());
+    }
+
+    let mut points3d = DataMatrix::zeros(pair.points3d.len(), 3);
+    let mut points2d = DataMatrix::zeros(pair.points2d.len(), 2);
+    for (index, (world, image)) in pair.points3d.iter().zip(&pair.points2d).enumerate() {
+        for dimension in 0..3 {
+            points3d.set(index, dimension, world[dimension]);
+        }
+        points2d.set(index, 0, image[0]);
+        points2d.set(index, 1, image[1]);
+    }
+    let rotation = matrix_from_array(pair.rotation);
+    let translation = Vector3::new(
+        pair.translation[0],
+        pair.translation[1],
+        pair.translation[2],
+    );
+    let truth: Vec<bool> = (0..pair.points3d.len())
+        .map(|index| {
+            let projected = rotation
+                * Vector3::new(
+                    points3d.get(index, 0),
+                    points3d.get(index, 1),
+                    points3d.get(index, 2),
+                )
+                + translation;
+            if !projected.z.is_finite() || projected.z <= 0.0 {
+                return false;
+            }
+            let image = Vector3::new(points2d.get(index, 0), points2d.get(index, 1), 1.0);
+            (Vector3::new(projected.x / projected.z, projected.y / projected.z, 1.0) - image).norm()
+                <= threshold
+        })
+        .collect();
+    let result = estimate_absolute_pose(&points3d, &points2d, threshold, Some(settings))?;
+    let error = normalized_median_residual(&truth, threshold, |index| {
+        inlier::bundle_adjustment::reprojection_error(
+            result.model.rotation.to_rotation_matrix().matrix(),
+            &result.model.translation.vector,
+            &nalgebra::Vector2::new(points2d.get(index, 0), points2d.get(index, 1)),
+            &Vector3::new(
+                points3d.get(index, 0),
+                points3d.get(index, 1),
+                points3d.get(index, 2),
+            ),
+        )
+    });
+    let pose = absolute_pose_to_array(&result.model);
+    Ok((
+        Outcome {
+            diagnostics: trial_diagnostics(&result.diagnostics, result.inliers.len(), truth.len()),
+            inliers: result.inliers,
+            iterations: result.iterations,
+            truth,
+            normalized_model_error: error,
+            epipolar_matrix: None,
+            homography_auc_3: None,
+        },
+        pose,
+    ))
 }
 
 fn run_rigid_fixture(
@@ -987,6 +1114,7 @@ fn run_phototourism_suite(
                                         normalized_model_error: outcome.normalized_model_error,
                                         inlier_classification_error: classification_error,
                                         epipolar_matrix: outcome.epipolar_matrix,
+                                        absolute_pose: None,
                                         inlier_indices: Some(outcome.inliers),
                                         homography_auc_3: outcome.homography_auc_3,
                                         diagnostics: Some(outcome.diagnostics),
@@ -1012,6 +1140,7 @@ fn run_phototourism_suite(
                                     normalized_model_error: f64::MAX,
                                     inlier_classification_error: 1.,
                                     epipolar_matrix: None,
+                                    absolute_pose: None,
                                     inlier_indices: None,
                                     homography_auc_3: None,
                                     diagnostics: None,
@@ -1078,6 +1207,7 @@ fn run_homography_suite(
                                     normalized_model_error: outcome.normalized_model_error,
                                     inlier_classification_error: classification_error,
                                     epipolar_matrix: None,
+                                    absolute_pose: None,
                                     inlier_indices: Some(outcome.inliers),
                                     homography_auc_3: outcome.homography_auc_3,
                                     diagnostics: Some(outcome.diagnostics),
@@ -1103,6 +1233,99 @@ fn run_homography_suite(
                                 normalized_model_error: f64::MAX,
                                 inlier_classification_error: 1.,
                                 epipolar_matrix: None,
+                                absolute_pose: None,
+                                inlier_indices: None,
+                                homography_auc_3: None,
+                                diagnostics: None,
+                                success: false,
+                                failure_reason: Some(reason),
+                            },
+                        };
+                        writeln!(out, "{}", serde_json::to_string(&trial)?)?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn run_absolute_pose_suite(
+    input: &AbsolutePoseInput,
+    suite: &Suite,
+    args: &Args,
+    out: &mut fs::File,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if input.schema_version != 1 || input.threshold <= 0.0 {
+        return Err("unsupported absolute-pose input schema or threshold".into());
+    }
+    let profiles: Vec<&String> = if args.smoke {
+        suite
+            .profiles
+            .iter()
+            .filter(|profile| profile.as_str() == "balanced")
+            .collect()
+    } else {
+        suite.profiles.iter().collect()
+    };
+    for pair in &input.pairs {
+        for mode in &suite.scoring_modes {
+            for sampler in &suite.samplers {
+                for profile in &profiles {
+                    for index in 0..args.seeds {
+                        let seed = 0x5EED_CAFE_D00D_BAAD_u64 ^ (index as u64);
+                        let start = Instant::now();
+                        let result = settings(profile, mode, sampler, seed).and_then(|settings| {
+                            run_absolute_pose_fixture(pair, input.threshold, settings)
+                        });
+                        let runtime_ms = start.elapsed().as_secs_f64() * 1000.;
+                        let trial = match result {
+                            Ok((outcome, pose)) => {
+                                let (precision, recall, classification_error) =
+                                    classification_score(&outcome.inliers, &outcome.truth);
+                                Trial {
+                                    suite: input.dataset.clone(),
+                                    suite_version: input.schema_version,
+                                    estimator: "absolute_pose".into(),
+                                    scoring_mode: mode.clone(),
+                                    sampler: sampler.clone(),
+                                    profile: (*profile).clone(),
+                                    scene: pair.scene.clone(),
+                                    seed,
+                                    runtime_ms,
+                                    iterations: outcome.iterations,
+                                    inlier_precision: precision,
+                                    inlier_recall: recall,
+                                    normalized_model_error: outcome.normalized_model_error,
+                                    inlier_classification_error: classification_error,
+                                    epipolar_matrix: None,
+                                    absolute_pose: Some(pose),
+                                    inlier_indices: Some(outcome.inliers),
+                                    homography_auc_3: None,
+                                    diagnostics: Some(outcome.diagnostics),
+                                    success: precision >= 0.9
+                                        && recall >= 0.9
+                                        && outcome.normalized_model_error <= 1.0,
+                                    failure_reason: None,
+                                }
+                            }
+                            Err(reason) => Trial {
+                                suite: input.dataset.clone(),
+                                suite_version: input.schema_version,
+                                estimator: "absolute_pose".into(),
+                                scoring_mode: mode.clone(),
+                                sampler: sampler.clone(),
+                                profile: (*profile).clone(),
+                                scene: pair.scene.clone(),
+                                seed,
+                                runtime_ms,
+                                iterations: 0,
+                                inlier_precision: 0.,
+                                inlier_recall: 0.,
+                                normalized_model_error: f64::MAX,
+                                inlier_classification_error: 1.,
+                                epipolar_matrix: None,
+                                absolute_pose: None,
                                 inlier_indices: None,
                                 homography_auc_3: None,
                                 diagnostics: None,
@@ -1168,6 +1391,7 @@ fn run_rigid_suite(
                                     normalized_model_error: outcome.normalized_model_error,
                                     inlier_classification_error: classification_error,
                                     epipolar_matrix: None,
+                                    absolute_pose: None,
                                     inlier_indices: Some(outcome.inliers),
                                     homography_auc_3: None,
                                     diagnostics: Some(outcome.diagnostics),
@@ -1193,6 +1417,7 @@ fn run_rigid_suite(
                                 normalized_model_error: f64::MAX,
                                 inlier_classification_error: 1.,
                                 epipolar_matrix: None,
+                                absolute_pose: None,
                                 inlier_indices: None,
                                 homography_auc_3: None,
                                 diagnostics: None,
@@ -1224,6 +1449,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = &args.homography_input {
         let input: HomographyInput = serde_json::from_str(&fs::read_to_string(path)?)?;
         run_homography_suite(&input, &suite, &args, &mut out)?;
+        return Ok(());
+    }
+    if let Some(path) = &args.absolute_pose_input {
+        let input: AbsolutePoseInput = serde_json::from_str(&fs::read_to_string(path)?)?;
+        run_absolute_pose_suite(&input, &suite, &args, &mut out)?;
         return Ok(());
     }
     if let Some(path) = &args.rigid_input {
@@ -1279,6 +1509,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                         normalized_model_error: outcome.normalized_model_error,
                                         inlier_classification_error: classification_error,
                                         epipolar_matrix: None,
+                                        absolute_pose: None,
                                         inlier_indices: None,
                                         homography_auc_3: outcome.homography_auc_3,
                                         diagnostics: Some(outcome.diagnostics),
@@ -1302,6 +1533,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     normalized_model_error: f64::MAX,
                                     inlier_classification_error: 1.,
                                     epipolar_matrix: None,
+                                    absolute_pose: None,
                                     inlier_indices: None,
                                     homography_auc_3: None,
                                     diagnostics: None,

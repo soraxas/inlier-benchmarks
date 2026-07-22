@@ -28,12 +28,20 @@ installed `inlier_data` Pooch registry, never copied into this repository.
   and writes deterministic inputs. The Rust runner compares uniform and PROSAC
   for every scoring mode; do not shuffle these correspondences because PROSAC
   consumes that confidence order.
+- EPOS absolute-pose validation uses `epos-pnp-ransac-val-v1.tar.zst`. Its
+  adapter retains the tutorial's first ten tentative-correspondence fields,
+  normalizes image coordinates by the supplied intrinsics, and sorts descending
+  by its probability-like confidence. Some source rows contain extra
+  per-instance confidences; do not reject those rows or treat their extra
+  fields as part of the public 2D--3D input.
 
 ## Running PhotoTourism
 
 ```bash
 just prepare-phototourism
 just phototourism-smoke
+just prepare-epos-pnp
+just epos-pnp-smoke
 just prepare-rigid
 just rigid-smoke
 ```
@@ -41,7 +49,8 @@ just rigid-smoke
 The first command requires `zstd`, `tar`, `h5py`, and a local `../inlier-data`
 checkout; Pooch downloads the archive once and verifies it before extraction.
 The smoke path selects one pair with 512 confidence-stratified correspondences and runs every
-robust scoring mode once. It is an integration guard, not a statistical full
+robust scoring mode once. EPOS PnP smoke selects one case; full runs select
+twelve cases round-robin across objects. Both are integration guards, not a statistical full
 benchmark. Scheduled and manually-dispatched full runs select eight pairs,
 balanced across both scenes, and sweep fast, balanced, and thorough maximum
 hypothesis budgets. `inlier` and OpenCV both use confidence-based adaptive
@@ -56,6 +65,12 @@ timed estimator output with `python/evaluate_phototourism.py`, which mirrors
 SuperRANSAC's `F -> E -> recoverPose` evaluation and reports pose `AUC@10°`.
 Use that continuous metric for the primary real-data speed/accuracy plot;
 success rate remains a CI gate and diagnostic field.
+
+For EPOS absolute pose, retain the world-to-camera pose and serialize the
+estimated 3x4 pose. `python/evaluate_absolute_pose.py` reports the maximum of
+rotation error and `atan2(||t - t_gt||, ||t_gt||)` in degrees before computing
+pose `AUC@10°`. This keeps translation error scale-normalized without claiming
+that the metric is the SuperRANSAC relative-pose metric.
 
 `python/run_opencv_reference.py` is the independent OpenCV RANSAC, USAC_PROSAC, and USAC_MAGSAC
 baseline for PhotoTourism fundamental and essential matrices plus tutorial homographies. It

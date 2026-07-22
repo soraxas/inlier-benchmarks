@@ -13,6 +13,13 @@ prepare-homography output="results/homography-input.json":
 homography-smoke input="results/homography-input.json":
   cargo run --release -- --suite {{suite}} --smoke --seeds 1 --homography-input {{input}} --output results/homography.jsonl
 
+prepare-epos-pnp output="results/epos-pnp-input.json":
+  uv run --no-project --with-editable ../inlier-data --with numpy python/prepare_epos_pnp.py --output {{output}}
+
+epos-pnp-smoke input="results/epos-pnp-input.json":
+  cargo run --release -- --suite {{suite}} --smoke --seeds 1 --absolute-pose-input {{input}} --output results/epos-pnp.jsonl
+  uv run --no-project --with numpy python/evaluate_absolute_pose.py --input {{input}} --results results/epos-pnp.jsonl
+
 prepare-rigid output="results/rigid-input.json":
   uv run --no-project --with-editable ../inlier-data --with numpy python/prepare_rigid.py --output {{output}}
 

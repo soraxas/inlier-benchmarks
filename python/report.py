@@ -34,6 +34,7 @@ def suite_label(suite: str) -> str:
         "public-api": "Synthetic public API",
         "phototourism-val": "PhotoTourism validation",
         "homography-ransac-val": "Homography validation",
+        "epos-pnp-val": "EPOS PnP validation",
     }.get(suite, suite)
 
 
@@ -323,7 +324,7 @@ def main(summary_path: str, output_dir: str) -> None:
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p>"
         "<p><b>OpenCV RANSAC and USAC_MAGSAC</b> are independent reference runs on the identical input pairs, thresholds, profiles, and seeds. Their timed region contains only OpenCV's robust-estimation call.</p></div></div>"
-        f"{''.join(plot_sections)}<h2>PhotoTourism Pair Diagnostics</h2><table><thead><tr>"
+        f"{''.join(plot_sections)}<h2>Benchmark Diagnostics</h2><table><thead><tr>"
         "<th>Dataset</th><th>Estimator</th><th>Mode</th><th>Sampler</th><th>Profile</th><th>Scene</th>"
         "<th>Quality AUC</th><th>Paired delta vs fast</th><th>Success</th><th>Median model error</th><th>Median ms</th><th>Median iterations</th><th>Mean sampler calls</th><th>Mean inlier ratio</th>"
         f"</tr></thead><tbody>{table_rows}</tbody></table></main>"

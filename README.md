@@ -43,6 +43,20 @@ just prepare-homography
 just homography-smoke
 ```
 
+## EPOS PnP smoke benchmark
+
+The EPOS absolute-pose benchmark downloads the immutable, image-free RANSAC
+Tutorial correspondence archive through `inlier_data`/Pooch. It normalizes the
+2D points by each case's intrinsics, preserves descending confidence order for
+PROSAC, and evaluates estimated world-to-camera poses against supplied ground
+truth. Its pose error is `max(rotation error, atan2(translation error,
+||t_gt||))`, reported through `AUC@10 degrees`.
+
+```bash
+just prepare-epos-pnp
+just epos-pnp-smoke
+```
+
 ## Rigid-registration smoke benchmark
 
 The real rigid-registration smoke test uses the deterministic
@@ -97,7 +111,7 @@ revision.
 
 ## Reference-comparison roadmap
 
-The current PhotoTourism fixture is an `inlier` API benchmark, not a numerical
+The current PhotoTourism, homography, and EPOS PnP fixtures are `inlier` API benchmarks, not a numerical
 reproduction of SuperRANSAC's aggregate paper result. See [TODO.md](TODO.md)
 for the six-dataset, two-feature-track work required for a like-for-like
 comparison.

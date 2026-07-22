@@ -69,7 +69,7 @@ def paired_quality_delta(
             len(deltas),
         )
 
-    if suite == "phototourism-val":
+    if suite in {"phototourism-val", "epos-pnp-val"}:
         errors = [
             (target.get("pose_error_deg"), baseline.get("pose_error_deg"))
             for target, baseline in pairs

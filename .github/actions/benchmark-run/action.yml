@@ -13,6 +13,9 @@ inputs:
   homography-pairs:
     required: false
     default: "2"
+  pnp-cases:
+    required: false
+    default: "1"
   scope:
     required: false
     default: smoke
@@ -35,7 +38,7 @@ runs:
       run: |
         command -v zstd
         uv run --no-project --with numpy --with opencv-python-headless \
-          python -m unittest python/test_evaluate_phototourism.py python/test_opencv_reference.py
+          python -m unittest python/test_evaluate_phototourism.py python/test_evaluate_absolute_pose.py python/test_opencv_reference.py
         uv run --no-project python -m unittest python/test_aggregate.py python/test_regress.py
         uv run --no-project --with-editable ./inlier-data --with h5py \
           python/prepare_phototourism.py \
@@ -63,6 +66,30 @@ runs:
                 raise SystemExit("successful PhotoTourism trial is missing pose-evaluation payload")
         PY
         cat results/phototourism.jsonl >> results/raw.jsonl
+        uv run --no-project --with-editable ./inlier-data --with numpy \
+          python/prepare_epos_pnp.py \
+          --cache-dir "$RUNNER_TEMP/inlier-data" \
+          --cases "${{ inputs.pnp-cases }}" \
+          --max-correspondences 512 \
+          --output results/epos-pnp-input.json
+        cargo run --release -- \
+          $real_args \
+          --absolute-pose-input results/epos-pnp-input.json \
+          --output results/epos-pnp.jsonl
+        uv run --no-project --with numpy \
+          python/evaluate_absolute_pose.py \
+          --input results/epos-pnp-input.json \
+          --results results/epos-pnp.jsonl
+        uv run --no-project python - <<'PY'
+        import json
+        from pathlib import Path
+
+        trials = [json.loads(line) for line in Path("results/epos-pnp.jsonl").read_text().splitlines()]
+        for trial in trials:
+            if trial["success"] and (trial.get("absolute_pose") is None or trial.get("inlier_indices") is None):
+                raise SystemExit("successful EPOS PnP trial is missing pose-evaluation payload")
+        PY
+        cat results/epos-pnp.jsonl >> results/raw.jsonl
         uv run --no-project --with-editable ./inlier-data --with h5py \
           python/prepare_homography.py \
           --cache-dir "$RUNNER_TEMP/inlier-data" \
