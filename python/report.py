@@ -51,6 +51,16 @@ def sampler_label(sampler: str) -> str:
     return {"uniform": "Uniform", "prosac": "PROSAC", "opencv": "OpenCV", "opencv_usac": "OpenCV"}.get(sampler, sampler)
 
 
+def variant_label(row: dict) -> str:
+    if row.get("variant", "default") != "essential_threshold_sweep":
+        return ""
+    return f" threshold x{row.get('threshold_scale', 1.0):g}"
+
+
+def mode_variant_label(row: dict) -> str:
+    return f"{mode_label(row['scoring_mode'])}{variant_label(row)}"
+
+
 def percentage(value: float | None) -> str:
     return f"{value:.1%}" if value is not None else "-"
 
@@ -93,6 +103,8 @@ def update_history(output: Path, dataset_rows: list[dict]) -> dict:
                     "estimator",
                     "scoring_mode",
                     "sampler",
+                    "variant",
+                    "threshold_scale",
                     "profile",
                     "trials",
                     "scene_count",
@@ -125,7 +137,8 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
     metric, metric_se, metric_label = quality_metric(suite)
     by_mode: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for row in rows:
-        by_mode[(row["scoring_mode"], row["sampler"])].append(row)
+        if row.get("variant", "default") == "default":
+            by_mode[(row["scoring_mode"], row["sampler"])].append(row)
     traces = []
     for (mode, sampler), points in sorted(by_mode.items()):
         points.sort(key=lambda row: PROFILE_ORDER.get(row["profile"], 99))
@@ -165,6 +178,7 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                         point.get("paired_auc_delta_vs_fast"),
                         point.get("paired_auc_delta_vs_fast_se"),
                         point.get("paired_auc_samples"),
+                        point.get("threshold_scale", 1.0),
                     ]
                     for point in points
                 ],
@@ -175,8 +189,40 @@ def make_plot(rows: list[dict], title: str, suite: str) -> dict:
                     "<br>Mean sampler calls: %{customdata[4]:.1f}"
                     "<br>Mean inlier ratio: %{customdata[5]:.1%}"
                     "<br>Paired AUC delta vs fast: %{customdata[6]:+.3f} +/- %{customdata[7]:.3f}"
-                    " (n=%{customdata[8]})<extra></extra>"
+                    " (n=%{customdata[8]})<br>Threshold scale: x%{customdata[9]:g}<extra></extra>"
                 ),
+            }
+        )
+    sweep_points = [row for row in rows if row.get("variant") == "essential_threshold_sweep"]
+    if sweep_points:
+        baseline = next(
+            (
+                row
+                for row in rows
+                if row["scoring_mode"] == "opencv_usac_magsac"
+                and row["sampler"] == "opencv"
+                and row["profile"] == "balanced"
+                and row.get("variant", "default") == "default"
+            ),
+            None,
+        )
+        if baseline is not None:
+            sweep_points.append(baseline)
+        sweep_points.sort(key=lambda row: row.get("threshold_scale", 1.0))
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "lines+markers",
+                "name": "OpenCV USAC_MAGSAC threshold sweep / OpenCV",
+                "x": [point["mean_runtime_ms"] / 1_000.0 for point in sweep_points],
+                "y": [point[metric] for point in sweep_points],
+                "error_x": {"type": "data", "array": [point["runtime_se_ms"] / 1_000.0 for point in sweep_points], "visible": True},
+                "error_y": {"type": "data", "array": [point[metric_se] or 0.0 for point in sweep_points], "visible": True},
+                "marker": {"color": MODE_COLORS["opencv_usac_magsac"], "size": 12, "line": {"color": "#fff", "width": 1}, "symbol": "diamond-open"},
+                "line": {"color": MODE_COLORS["opencv_usac_magsac"], "dash": "dot"},
+                "customdata": [[point.get("threshold_scale", 1.0), point["trials"]] for point in sweep_points],
+                "hovertemplate": "OpenCV USAC_MAGSAC threshold sweep<br>Threshold scale: x%{customdata[0]:g}<br>Time: %{x:.4f} s"
+                f"<br>{metric_label}: %{{y:.4f}}<br>Trials: %{{customdata[1]}}<extra></extra>",
             }
         )
     return {
@@ -239,7 +285,7 @@ def main(summary_path: str, output_dir: str) -> None:
         "<tr>"
         f"<td>{html.escape(suite_label(row['suite']))}</td>"
         f"<td>{html.escape(row['estimator'])}</td>"
-        f"<td>{html.escape(mode_label(row['scoring_mode']))}</td>"
+        f"<td>{html.escape(mode_variant_label(row))}</td>"
         f"<td>{html.escape(sampler_label(row['sampler']))}</td>"
         f"<td>{html.escape(row['profile'])}</td>"
         f"<td>{html.escape(row['scene'])}</td>"
@@ -271,7 +317,7 @@ def main(summary_path: str, output_dir: str) -> None:
         "<header><h1>Inlier Benchmarks</h1><p>Robust-estimation speed versus accuracy. Up and left is better.</p></header>"
         "<nav class=tabs role=tablist aria-label='Benchmark views'><button role=tab aria-selected=true aria-controls=quality-panel data-tab=quality-panel>Current results</button><button role=tab aria-selected=false aria-controls=history-panel data-tab=history-panel>Historical regression</button></nav>"
         "<main id=quality-panel class=panel><div class=primer><div><h2>Reading the plots</h2><p>PhotoTourism follows the SuperRANSAC convention: pose AUC@10 degrees on the y-axis and average estimation time in seconds on a logarithmic x-axis. Homography validation uses transfer AUC@3 pixels against its ground-truth homography. Standard-error bars show trial variability.</p>"
-        "<p>Color identifies the scorer. Circles are uniform sampling, triangles are PROSAC, and diamonds are OpenCV. Marker size increases from fast through balanced to thorough. Dashed lines identify external implementations. The paired AUC delta column compares each point with fast using the identical scene and RNG seed; it separates a real budget effect from unmatched trial variance. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
+        "<p>Color identifies the scorer. Circles are uniform sampling, triangles are PROSAC, and diamonds are OpenCV. Marker size increases from fast through balanced to thorough. Dashed lines identify external implementations; the dotted OpenCV curve sweeps the normalized essential-matrix threshold at the balanced budget. The paired AUC delta column compares each point with fast using the identical scene and RNG seed; it separates a real budget effect from unmatched trial variance. The public dashboard contains only full runs over all selected pairs; smoke runs remain CI artifacts.</p></div>"
         "<div><h2>Scoring modes</h2><p><b>RANSAC</b> ranks hypotheses by inlier count. <b>MSAC</b> uses a truncated squared-residual cost. <b>MAGSAC</b> marginalizes uncertainty in the noise scale.</p>"
         "<p><b><a href=https://openaccess.thecvf.com/content_CVPR_2020/html/Barath_MAGSAC_a_Fast_Reliable_and_Accurate_Robust_Estimator_CVPR_2020_paper.html>MAGSAC++</a></b> is the sigma-consensus++ scoring variant: it uses a robust loss marginalized over the noise scale. This implementation evaluates that loss through a precomputed integral lookup table.</p>"
         "<p><b>OpenCV RANSAC and USAC_MAGSAC</b> are independent reference runs on the identical input pairs, thresholds, profiles, and seeds. Their timed region contains only OpenCV's robust-estimation call.</p></div></div>"

@@ -205,6 +205,8 @@ def add_paired_deltas(summaries: list[dict], records: list[dict]) -> None:
             trial["estimator"],
             trial["scoring_mode"],
             trial["sampler"],
+            trial["variant"],
+            trial["threshold_scale"],
             trial["scene"],
             trial["seed"],
         ): trial
@@ -217,7 +219,15 @@ def add_paired_deltas(summaries: list[dict], records: list[dict]) -> None:
             for trial in records
             if all(
                 trial[field] == summary[field]
-                for field in ("suite", "estimator", "scoring_mode", "sampler", "profile")
+                for field in (
+                    "suite",
+                    "estimator",
+                    "scoring_mode",
+                    "sampler",
+                    "variant",
+                    "threshold_scale",
+                    "profile",
+                )
             )
             and ("scene" not in summary or trial["scene"] == summary["scene"])
         ]
@@ -230,6 +240,8 @@ def add_paired_deltas(summaries: list[dict], records: list[dict]) -> None:
                     trial["estimator"],
                     trial["scoring_mode"],
                     trial["sampler"],
+                    trial["variant"],
+                    trial["threshold_scale"],
                     trial["scene"],
                     trial["seed"],
                 )
@@ -248,11 +260,32 @@ def main(raw_path: str, output_path: str) -> None:
     # Preserve those historic artifacts as a separately labelled baseline.
     for record in records:
         record.setdefault("sampler", "prosac")
+        record.setdefault("variant", "default")
+        record.setdefault("threshold_scale", 1.0)
     summaries = summarize(
-        records, ("suite", "estimator", "scoring_mode", "sampler", "profile", "scene")
+        records,
+        (
+            "suite",
+            "estimator",
+            "scoring_mode",
+            "sampler",
+            "variant",
+            "threshold_scale",
+            "profile",
+            "scene",
+        ),
     )
     dataset_summaries = summarize(
-        records, ("suite", "estimator", "scoring_mode", "sampler", "profile")
+        records,
+        (
+            "suite",
+            "estimator",
+            "scoring_mode",
+            "sampler",
+            "variant",
+            "threshold_scale",
+            "profile",
+        ),
     )
     add_paired_deltas(summaries, records)
     add_paired_deltas(dataset_summaries, records)

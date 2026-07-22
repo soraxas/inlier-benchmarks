@@ -88,6 +88,21 @@ class AggregateTests(unittest.TestCase):
         self.assertEqual(balanced["paired_auc_samples"], 1)
         self.assertGreater(balanced["paired_auc_delta_vs_fast"], 0.0)
 
+    def test_threshold_sweep_scales_do_not_merge(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            raw_path = Path(directory) / "raw.jsonl"
+            output_path = Path(directory) / "summary.json"
+            low = trial("opencv")
+            low.update({"variant": "essential_threshold_sweep", "threshold_scale": 0.5})
+            high = trial("opencv")
+            high.update({"variant": "essential_threshold_sweep", "threshold_scale": 2.0})
+            raw_path.write_text("\n".join(json.dumps(record) for record in [low, high]))
+            aggregate.main(str(raw_path), str(output_path))
+            groups = json.loads(output_path.read_text())["groups"]
+
+        self.assertEqual(len(groups), 2)
+        self.assertEqual({group["threshold_scale"] for group in groups}, {0.5, 2.0})
+
 
 if __name__ == "__main__":
     unittest.main()

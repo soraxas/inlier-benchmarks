@@ -63,6 +63,11 @@ must consume the prepared JSON inputs, use the same profiles/seeds/thresholds,
 and emit the standard JSONL schema so the existing evaluators and aggregation
 remain the single source of truth.
 
+The OpenCV USAC_MAGSAC essential reference also runs a balanced-budget
+threshold-scale sweep (`0.25x`, `0.5x`, `1x`, `2x`, `4x`). Keep the sweep in
+the `essential_threshold_sweep` result variant; aggregation and reporting must
+never combine it with the ordinary profile variant.
+
 ## CI Checkout Layout
 
 The benchmark workflow checks out `inlier` and `inlier-data` into the workspace

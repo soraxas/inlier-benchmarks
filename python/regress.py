@@ -39,6 +39,8 @@ def index(summary: dict) -> dict[tuple[str, ...], dict]:
             row["estimator"],
             row["scoring_mode"],
             row.get("sampler", "prosac"),
+            row.get("variant", "default"),
+            row.get("threshold_scale", 1.0),
             row["profile"],
             row["scene"],
         )

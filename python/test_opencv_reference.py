@@ -73,10 +73,19 @@ class OpenCvReferenceTests(unittest.TestCase):
         self.assertEqual(trial["scoring_mode"], "opencv_ransac")
 
     def test_essential_reference_emits_pose_payload(self) -> None:
-        trial = run_essential(fundamental_pair(), 1e-3, "balanced", 7)
+        trial = run_essential(
+            fundamental_pair(),
+            1e-3,
+            "balanced",
+            7,
+            variant="essential_threshold_sweep",
+            threshold_scale=0.5,
+        )
         self.assertTrue(trial["success"])
         self.assertEqual(trial["estimator"], "essential")
         self.assertGreaterEqual(len(trial["inlier_indices"]), 5)
+        self.assertEqual(trial["variant"], "essential_threshold_sweep")
+        self.assertEqual(trial["threshold_scale"], 0.5)
 
 
 if __name__ == "__main__":

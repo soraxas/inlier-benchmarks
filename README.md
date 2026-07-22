@@ -78,6 +78,11 @@ essential fitting plus tutorial homographies, uses the same confidence/iteration
 RNG seeds, and measures only the OpenCV robust-estimation call. Its pose and
 transfer quality are evaluated by the same post-processing code as `inlier`.
 
+OpenCV USAC_MAGSAC additionally sweeps its normalized essential-matrix
+threshold at the balanced budget (`0.25x`, `0.5x`, `1x`, `2x`, and `4x`). The
+dashboard renders that calibration as a separate dotted curve; it is not
+merged into the ordinary fast/balanced/thorough profile results.
+
 This is an independent implementation baseline, not a claim of like-for-like
 SuperRANSAC paper reproduction. The remaining multi-dataset, multi-feature
 evaluation work is tracked below.

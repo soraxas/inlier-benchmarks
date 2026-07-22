@@ -22,6 +22,7 @@ OPENCV_METHODS = {
     "opencv_ransac": cv2.RANSAC,
     "opencv_usac_magsac": cv2.USAC_MAGSAC,
 }
+ESSENTIAL_THRESHOLD_SCALES = (0.25, 0.5, 2.0, 4.0)
 
 
 def sampson_errors(matrix: np.ndarray, points1: np.ndarray, points2: np.ndarray) -> np.ndarray:
@@ -82,6 +83,8 @@ def base_trial(
     suite: str,
     estimator: str,
     scoring_mode: str,
+    variant: str,
+    threshold_scale: float,
     profile: str,
     scene: str,
     seed: int,
@@ -93,6 +96,8 @@ def base_trial(
         "estimator": estimator,
         "scoring_mode": scoring_mode,
         "sampler": "opencv",
+        "variant": variant,
+        "threshold_scale": threshold_scale,
         "profile": profile,
         "scene": scene,
         "seed": seed,
@@ -112,7 +117,14 @@ def base_trial(
 
 
 def run_fundamental(
-    pair: dict, threshold: float, profile: str, seed: int, scoring_mode: str = "opencv_usac_magsac"
+    pair: dict,
+    threshold: float,
+    profile: str,
+    seed: int,
+    scoring_mode: str = "opencv_usac_magsac",
+    *,
+    variant: str = "default",
+    threshold_scale: float = 1.0,
 ) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
@@ -128,6 +140,8 @@ def run_fundamental(
         suite="phototourism-val",
         estimator="fundamental",
         scoring_mode=scoring_mode,
+        variant=variant,
+        threshold_scale=threshold_scale,
         profile=profile,
         scene=f"{pair['scene']}/{pair['pair']}",
         seed=seed,
@@ -160,7 +174,14 @@ def run_fundamental(
 
 
 def run_essential(
-    pair: dict, threshold: float, profile: str, seed: int, scoring_mode: str = "opencv_usac_magsac"
+    pair: dict,
+    threshold: float,
+    profile: str,
+    seed: int,
+    scoring_mode: str = "opencv_usac_magsac",
+    *,
+    variant: str = "default",
+    threshold_scale: float = 1.0,
 ) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
@@ -170,7 +191,7 @@ def run_essential(
     focal_scale = np.mean(
         [intrinsics1[0, 0], intrinsics1[1, 1], intrinsics2[0, 0], intrinsics2[1, 1]]
     )
-    normalized_threshold = threshold / focal_scale
+    normalized_threshold = threshold * threshold_scale / focal_scale
     method = OPENCV_METHODS[scoring_mode]
     cv2.setRNGSeed(seed & 0x7FFF_FFFF)
     start = time.perf_counter_ns()
@@ -190,6 +211,8 @@ def run_essential(
         suite="phototourism-val",
         estimator="essential",
         scoring_mode=scoring_mode,
+        variant=variant,
+        threshold_scale=threshold_scale,
         profile=profile,
         scene=f"{pair['scene']}/{pair['pair']}",
         seed=seed,
@@ -222,7 +245,14 @@ def run_essential(
 
 
 def run_homography(
-    pair: dict, threshold: float, profile: str, seed: int, scoring_mode: str = "opencv_usac_magsac"
+    pair: dict,
+    threshold: float,
+    profile: str,
+    seed: int,
+    scoring_mode: str = "opencv_usac_magsac",
+    *,
+    variant: str = "default",
+    threshold_scale: float = 1.0,
 ) -> dict:
     points1 = np.asarray(pair["points1"], dtype=np.float64)
     points2 = np.asarray(pair["points2"], dtype=np.float64)
@@ -238,6 +268,8 @@ def run_homography(
         suite="homography-ransac-val",
         estimator="homography",
         scoring_mode=scoring_mode,
+        variant=variant,
+        threshold_scale=threshold_scale,
         profile=profile,
         scene=f"{pair['dataset']}/{pair['pair']}",
         seed=seed,
@@ -303,6 +335,20 @@ def main() -> None:
                 trials.extend(
                     run_homography(pair, homography["threshold"], profile, seed, scoring_mode)
                     for pair in homography["pairs"]
+                )
+            if profile == "balanced":
+                trials.extend(
+                    run_essential(
+                        pair,
+                        photo["threshold"],
+                        profile,
+                        seed,
+                        "opencv_usac_magsac",
+                        variant="essential_threshold_sweep",
+                        threshold_scale=scale,
+                    )
+                    for scale in ESSENTIAL_THRESHOLD_SCALES
+                    for pair in photo["pairs"]
                 )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("".join(json.dumps(trial, allow_nan=False) + "\n" for trial in trials))
