@@ -53,6 +53,8 @@ def main() -> None:
         if trial["suite"] != "epos-pnp-val":
             continue
         trial["pose_error_deg"] = pose_error_degrees(pairs[trial["scene"]], trial)
+        # EPOS quality is pose AUC, not correspondence-label precision/recall.
+        trial["success"] = trial["pose_error_deg"] <= 10.0
         evaluated += 1
     args.results.write_text("".join(json.dumps(trial) + "\n" for trial in trials))
     print(f"evaluated {evaluated} EPOS PnP pose trial(s)")

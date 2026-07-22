@@ -78,6 +78,11 @@ must consume the prepared JSON inputs, use the same profiles/seeds/thresholds,
 and emit the standard JSONL schema so the existing evaluators and aggregation
 remain the single source of truth.
 
+`python/run_opencv_pnp_reference.py` is the EPOS `solvePnPRansac`/EPnP baseline.
+It must receive the same normalized coordinates, normalized reprojection
+threshold, maximum-iteration profile, and seed as the Rust runner. Evaluate
+both implementations exclusively through `evaluate_absolute_pose.py`.
+
 The OpenCV USAC_MAGSAC essential reference also runs a balanced-budget
 threshold-scale sweep (`0.25x`, `0.5x`, `1x`, `2x`, `4x`). Keep the sweep in
 the `essential_threshold_sweep` result variant; aggregation and reporting must
